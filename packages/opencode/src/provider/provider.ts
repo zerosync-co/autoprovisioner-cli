@@ -18,6 +18,7 @@ import { WriteTool } from "../tool/write"
 import { TodoReadTool, TodoWriteTool } from "../tool/todo"
 import { AuthAnthropic } from "../auth/anthropic"
 import { AuthCopilot } from "../auth/copilot"
+import { AuthZerosync } from "../auth/zerosync"
 import { ModelsDev } from "./models"
 import { NamedError } from "../util/error"
 import { Auth } from "../auth"
@@ -38,6 +39,34 @@ export namespace Provider {
   type Source = "env" | "config" | "custom" | "api"
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
+    async zerosync(provider) {
+      const access = await AuthZerosync.access()
+      if (!access) return { autoload: false }
+      for (const model of Object.values(provider.models)) {
+        model.cost = {
+          input: 0,
+          output: 0,
+        }
+      }
+      return {
+        autoload: true,
+        options: {
+          apiKey: "",
+          async fetch(input: any, init: any) {
+            const access = await AuthZerosync.access()
+            const headers = {
+              ...init.headers,
+              authorization: `Bearer ${access}`,
+            }
+            delete headers["x-api-key"]
+            return fetch(input, {
+              ...init,
+              headers,
+            })
+          },
+        },
+      }
+    },
     async anthropic(provider) {
       const access = await AuthAnthropic.access()
       if (!access) return { autoload: false }

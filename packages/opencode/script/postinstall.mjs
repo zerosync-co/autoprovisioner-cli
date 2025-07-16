@@ -9,6 +9,8 @@ import { createRequire } from "module"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
+const APP = "autoprovisioner"
+
 function detectPlatformAndArch() {
   // Map platform names
   let platform
@@ -49,8 +51,8 @@ function detectPlatformAndArch() {
 
 function findBinary() {
   const { platform, arch } = detectPlatformAndArch()
-  const packageName = `opencode-${platform}-${arch}`
-  const binary = platform === "win32" ? "opencode.exe" : "opencode"
+  const packageName = `${APP}-${platform}-${arch}`
+  const binary = platform === "win32" ? `${APP}.exe` : `${APP}`
 
   try {
     // Use require.resolve to find the package
@@ -71,7 +73,7 @@ function findBinary() {
 function main() {
   try {
     const binaryPath = findBinary()
-    const binScript = path.join(__dirname, "bin", "opencode")
+    const binScript = path.join(__dirname, "bin", APP)
 
     // Remove existing bin script if it exists
     if (fs.existsSync(binScript)) {
@@ -80,9 +82,9 @@ function main() {
 
     // Create symlink to the actual binary
     fs.symlinkSync(binaryPath, binScript)
-    console.log(`opencode binary symlinked: ${binScript} -> ${binaryPath}`)
+    console.log(`${APP} binary symlinked: ${binScript} -> ${binaryPath}`)
   } catch (error) {
-    console.error("Failed to create opencode binary symlink:", error.message)
+    console.error(`Failed to create ${APP} binary symlink:`, error.message)
     process.exit(1)
   }
 }

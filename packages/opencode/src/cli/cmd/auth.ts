@@ -1,5 +1,6 @@
 import { AuthAnthropic } from "../../auth/anthropic"
 import { AuthCopilot } from "../../auth/copilot"
+import { AuthZerosync } from "../../auth/zerosync"
 import { Auth } from "../../auth"
 import { cmd } from "./cmd"
 import * as prompts from "@clack/prompts"
@@ -74,10 +75,11 @@ export const AuthLoginCommand = cmd({
     prompts.intro("Add credential")
     const providers = await ModelsDev.get()
     const priority: Record<string, number> = {
-      anthropic: 0,
-      "github-copilot": 1,
-      openai: 2,
-      google: 3,
+      zerosync: 0,
+      anthropic: 1,
+      "github-copilot": 2,
+      openai: 3,
+      google: 4,
     }
     let provider = await prompts.select({
       message: "Select provider",
@@ -122,6 +124,16 @@ export const AuthLoginCommand = cmd({
       prompts.log.info(
         "Amazon bedrock can be configured with standard AWS environment variables like AWS_PROFILE or AWS_ACCESS_KEY_ID",
       )
+      prompts.outro("Done")
+      return
+    }
+
+    if (provider === "zerosync") {
+      // some weird bug where program exits without this
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      await AuthZerosync.access()
+
       prompts.outro("Done")
       return
     }
