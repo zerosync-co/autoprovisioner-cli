@@ -2,7 +2,9 @@
 
 import { $ } from "bun"
 
-import pkg from "../package.json"
+const pkg = {
+  name: "autoprovisioner",
+}
 
 const APP = "autoprovisioner"
 const GITHUB_OWNER = "zerosync-co"
