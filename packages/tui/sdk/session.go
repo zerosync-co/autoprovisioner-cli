@@ -605,6 +605,7 @@ type Part struct {
 	Cost      float64  `json:"cost"`
 	Filename  string   `json:"filename"`
 	Mime      string   `json:"mime"`
+	Snapshot  string   `json:"snapshot"`
 	// This field can have the runtime type of [ToolPartState].
 	State     interface{} `json:"state"`
 	Synthetic bool        `json:"synthetic"`
@@ -629,6 +630,7 @@ type partJSON struct {
 	Cost        apijson.Field
 	Filename    apijson.Field
 	Mime        apijson.Field
+	Snapshot    apijson.Field
 	State       apijson.Field
 	Synthetic   apijson.Field
 	Text        apijson.Field
@@ -657,13 +659,13 @@ func (r *Part) UnmarshalJSON(data []byte) (err error) {
 // for more type safety.
 //
 // Possible runtime types of the union are [TextPart], [FilePart], [ToolPart],
-// [StepStartPart], [StepFinishPart].
+// [StepStartPart], [StepFinishPart], [SnapshotPart].
 func (r Part) AsUnion() PartUnion {
 	return r.union
 }
 
-// Union satisfied by [TextPart], [FilePart], [ToolPart], [StepStartPart] or
-// [StepFinishPart].
+// Union satisfied by [TextPart], [FilePart], [ToolPart], [StepStartPart],
+// [StepFinishPart] or [SnapshotPart].
 type PartUnion interface {
 	implementsPart()
 }
@@ -697,6 +699,11 @@ func init() {
 			Type:               reflect.TypeOf(StepFinishPart{}),
 			DiscriminatorValue: "step-finish",
 		},
+		apijson.UnionVariant{
+			TypeFilter:         gjson.JSON,
+			Type:               reflect.TypeOf(SnapshotPart{}),
+			DiscriminatorValue: "snapshot",
+		},
 	)
 }
 
@@ -708,11 +715,12 @@ const (
 	PartTypeTool       PartType = "tool"
 	PartTypeStepStart  PartType = "step-start"
 	PartTypeStepFinish PartType = "step-finish"
+	PartTypeSnapshot   PartType = "snapshot"
 )
 
 func (r PartType) IsKnown() bool {
 	switch r {
-	case PartTypeText, PartTypeFile, PartTypeTool, PartTypeStepStart, PartTypeStepFinish:
+	case PartTypeText, PartTypeFile, PartTypeTool, PartTypeStepStart, PartTypeStepFinish, PartTypeSnapshot:
 		return true
 	}
 	return false
@@ -814,6 +822,50 @@ func (r *SessionShare) UnmarshalJSON(data []byte) (err error) {
 
 func (r sessionShareJSON) RawJSON() string {
 	return r.raw
+}
+
+type SnapshotPart struct {
+	ID        string           `json:"id,required"`
+	MessageID string           `json:"messageID,required"`
+	SessionID string           `json:"sessionID,required"`
+	Snapshot  string           `json:"snapshot,required"`
+	Type      SnapshotPartType `json:"type,required"`
+	JSON      snapshotPartJSON `json:"-"`
+}
+
+// snapshotPartJSON contains the JSON metadata for the struct [SnapshotPart]
+type snapshotPartJSON struct {
+	ID          apijson.Field
+	MessageID   apijson.Field
+	SessionID   apijson.Field
+	Snapshot    apijson.Field
+	Type        apijson.Field
+	raw         string
+	ExtraFields map[string]apijson.Field
+}
+
+func (r *SnapshotPart) UnmarshalJSON(data []byte) (err error) {
+	return apijson.UnmarshalRoot(data, r)
+}
+
+func (r snapshotPartJSON) RawJSON() string {
+	return r.raw
+}
+
+func (r SnapshotPart) implementsPart() {}
+
+type SnapshotPartType string
+
+const (
+	SnapshotPartTypeSnapshot SnapshotPartType = "snapshot"
+)
+
+func (r SnapshotPartType) IsKnown() bool {
+	switch r {
+	case SnapshotPartTypeSnapshot:
+		return true
+	}
+	return false
 }
 
 type StepFinishPart struct {

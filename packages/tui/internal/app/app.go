@@ -50,6 +50,9 @@ type App struct {
 	IsLeaderSequence bool
 }
 
+type SessionCreatedMsg = struct {
+	Session *opencode.Session
+}
 type SessionSelectedMsg = *opencode.Session
 type SessionLoadedMsg struct{}
 type ModelSelectedMsg struct {
@@ -202,10 +205,17 @@ func (a *App) SetClipboard(text string) tea.Cmd {
 	return tea.Sequence(cmds...)
 }
 
-func (a *App) SwitchMode() (*App, tea.Cmd) {
-	a.ModeIndex++
-	if a.ModeIndex >= len(a.Modes) {
-		a.ModeIndex = 0
+func (a *App) cycleMode(forward bool) (*App, tea.Cmd) {
+	if forward {
+		a.ModeIndex++
+		if a.ModeIndex >= len(a.Modes) {
+			a.ModeIndex = 0
+		}
+	} else {
+		a.ModeIndex--
+		if a.ModeIndex < 0 {
+			a.ModeIndex = len(a.Modes) - 1
+		}
 	}
 	a.Mode = &a.Modes[a.ModeIndex]
 
@@ -241,8 +251,16 @@ func (a *App) SwitchMode() (*App, tea.Cmd) {
 	}
 }
 
+func (a *App) SwitchMode() (*App, tea.Cmd) {
+	return a.cycleMode(true)
+}
+
+func (a *App) SwitchModeReverse() (*App, tea.Cmd) {
+	return a.cycleMode(false)
+}
+
 func (a *App) InitializeProvider() tea.Cmd {
-	providersResponse, err := a.Client.Config.Providers(context.Background())
+	providersResponse, err := a.Client.App.Providers(context.Background())
 	if err != nil {
 		slog.Error("Failed to list providers", "error", err)
 		// TODO: notify user
@@ -337,7 +355,7 @@ func (a *App) InitializeProvider() tea.Cmd {
 }
 
 func getDefaultModel(
-	response *opencode.ConfigProvidersResponse,
+	response *opencode.AppProvidersResponse,
 	provider opencode.Provider,
 ) *opencode.Model {
 	if match, ok := response.Default[provider.ID]; ok {
@@ -380,10 +398,11 @@ func (a *App) InitializeProject(ctx context.Context) tea.Cmd {
 	}
 
 	a.Session = session
-	cmds = append(cmds, util.CmdHandler(SessionSelectedMsg(session)))
+	cmds = append(cmds, util.CmdHandler(SessionCreatedMsg{Session: session}))
 
 	go func() {
 		_, err := a.Client.Session.Init(ctx, a.Session.ID, opencode.SessionInitParams{
+			MessageID:  opencode.F(id.Ascending(id.Message)),
 			ProviderID: opencode.F(a.Provider.ID),
 			ModelID:    opencode.F(a.Model.ID),
 		})
@@ -455,7 +474,7 @@ func (a *App) SendChatMessage(
 			return a, toast.NewErrorToast(err.Error())
 		}
 		a.Session = session
-		cmds = append(cmds, util.CmdHandler(SessionSelectedMsg(session)))
+		cmds = append(cmds, util.CmdHandler(SessionCreatedMsg{Session: session}))
 	}
 
 	message := opencode.UserMessage{
@@ -599,7 +618,7 @@ func (a *App) ListMessages(ctx context.Context, sessionId string) ([]Message, er
 }
 
 func (a *App) ListProviders(ctx context.Context) ([]opencode.Provider, error) {
-	response, err := a.Client.Config.Providers(ctx)
+	response, err := a.Client.App.Providers(ctx)
 	if err != nil {
 		return nil, err
 	}

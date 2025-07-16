@@ -17,6 +17,7 @@ import {
 
 import PROMPT_INITIALIZE from "../session/prompt/initialize.txt"
 import PROMPT_PLAN from "../session/prompt/plan.txt"
+import PROMPT_ANTHROPIC_SPOOF from "../session/prompt/anthropic_spoof.txt"
 
 import { App } from "../app/app"
 import { Bus } from "../bus"
@@ -230,8 +231,7 @@ export namespace Session {
       info: MessageV2.Info
       parts: MessageV2.Part[]
     }[]
-    const list = Storage.list("session/message/" + sessionID)
-    for await (const p of list) {
+    for (const p of await Storage.list("session/message/" + sessionID)) {
       const read = await Storage.readJSON<MessageV2.Info>(p)
       result.push({
         info: read,
@@ -248,7 +248,7 @@ export namespace Session {
 
   export async function parts(sessionID: string, messageID: string) {
     const result = [] as MessageV2.Part[]
-    for await (const item of Storage.list("session/part/" + sessionID + "/" + messageID)) {
+    for (const item of await Storage.list("session/part/" + sessionID + "/" + messageID)) {
       const read = await Storage.readJSON<MessageV2.Part>(item)
       result.push(read)
     }
@@ -257,7 +257,7 @@ export namespace Session {
   }
 
   export async function* list() {
-    for await (const item of Storage.list("session/info")) {
+    for (const item of await Storage.list("session/info")) {
       const sessionID = path.basename(item, ".json")
       yield get(sessionID)
     }
@@ -265,7 +265,7 @@ export namespace Session {
 
   export async function children(parentID: string) {
     const result = [] as Session.Info[]
-    for await (const item of Storage.list("session/info")) {
+    for (const item of await Storage.list("session/info")) {
       const sessionID = path.basename(item, ".json")
       const session = await get(sessionID)
       if (session.parentID !== parentID) continue
@@ -444,7 +444,7 @@ export namespace Session {
                 const result = await ReadTool.execute(args, {
                   sessionID: input.sessionID,
                   abort: abort.signal,
-                  messageID: "", // read tool doesn't use message ID
+                  messageID: userMsg.id,
                   metadata: async () => {},
                 })
                 return [
@@ -505,9 +505,10 @@ export namespace Session {
       })
 
     if (msgs.length === 0 && !session.parentID) {
+      const small = (await Provider.getSmallModel(input.providerID)) ?? model
       generateText({
         maxOutputTokens: input.providerID === "google" ? 1024 : 20,
-        providerOptions: model.info.options,
+        providerOptions: small.info.options,
         messages: [
           ...SystemPrompt.title(input.providerID).map(
             (x): ModelMessage => ({
@@ -529,7 +530,7 @@ export namespace Session {
             },
           ]),
         ],
-        model: model.language,
+        model: small.language,
       })
         .then((result) => {
           if (result.text)
@@ -546,7 +547,8 @@ export namespace Session {
     msgs.push({ info: userMsg, parts: userParts })
 
     const mode = await Mode.get(input.mode ?? "build")
-    let system = mode.prompt ? [mode.prompt] : SystemPrompt.provider(input.providerID, input.modelID)
+    let system = input.providerID === "anthropic" ? [PROMPT_ANTHROPIC_SPOOF.trim()] : []
+    system.push(...(mode.prompt ? [mode.prompt] : SystemPrompt.provider(input.modelID)))
     system.push(...(await SystemPrompt.environment()))
     system.push(...(await SystemPrompt.custom()))
     // max 2 system prompt messages for caching purposes
@@ -578,20 +580,22 @@ export namespace Session {
     await updateMessage(assistantMsg)
     const tools: Record<string, AITool> = {}
 
+    const processor = createProcessor(assistantMsg, model.info)
+
     for (const item of await Provider.tools(input.providerID)) {
       if (mode.tools[item.id] === false) continue
+      if (session.parentID && item.id === "task") continue
       tools[item.id] = tool({
         id: item.id as any,
         description: item.description,
         inputSchema: item.parameters as ZodSchema,
-        async execute(args) {
+        async execute(args, options) {
           const result = await item.execute(args, {
             sessionID: input.sessionID,
             abort: abort.signal,
             messageID: assistantMsg.id,
-            metadata: async () => {
-              /*
-              const match = toolCalls[opts.toolCallId]
+            metadata: async (val) => {
+              const match = processor.partFromToolCall(options.toolCallId)
               if (match && match.state.status === "running") {
                 await updatePart({
                   ...match,
@@ -599,14 +603,13 @@ export namespace Session {
                     title: val.title,
                     metadata: val.metadata,
                     status: "running",
-                    input: args.input,
+                    input: args,
                     time: {
                       start: Date.now(),
                     },
                   },
                 })
               }
-              */
             },
           })
           return result
@@ -644,7 +647,7 @@ export namespace Session {
       tools[key] = item
     }
 
-    const result = streamText({
+    const stream = streamText({
       onError() {},
       maxRetries: 10,
       maxOutputTokens: outputLimit,
@@ -677,229 +680,260 @@ export namespace Session {
         ],
       }),
     })
-    return processStream(assistantMsg, model.info, result)
+    const result = await processor.process(stream)
+    return result
   }
 
-  async function processStream(
-    assistantMsg: MessageV2.Assistant,
-    model: ModelsDev.Model,
-    stream: StreamTextResult<Record<string, AITool>, never>,
-  ) {
-    try {
-      let currentText: MessageV2.TextPart | undefined
-      const toolCalls: Record<string, MessageV2.ToolPart> = {}
+  function createProcessor(assistantMsg: MessageV2.Assistant, model: ModelsDev.Model) {
+    const toolCalls: Record<string, MessageV2.ToolPart> = {}
+    return {
+      partFromToolCall(toolCallID: string) {
+        return toolCalls[toolCallID]
+      },
+      async process(stream: StreamTextResult<Record<string, AITool>, never>) {
+        try {
+          let currentText: MessageV2.TextPart | undefined
 
-      for await (const value of stream.fullStream) {
-        log.info("part", {
-          type: value.type,
-        })
-        switch (value.type) {
-          case "start":
-            break
-
-          case "tool-input-start":
-            const part = await updatePart({
-              id: Identifier.ascending("part"),
-              messageID: assistantMsg.id,
-              sessionID: assistantMsg.sessionID,
-              type: "tool",
-              tool: value.toolName,
-              callID: value.id,
-              state: {
-                status: "pending",
-              },
+          for await (const value of stream.fullStream) {
+            log.info("part", {
+              type: value.type,
             })
-            toolCalls[value.id] = part as MessageV2.ToolPart
-            break
+            switch (value.type) {
+              case "start":
+                const snapshot = await Snapshot.create(assistantMsg.sessionID)
+                if (snapshot)
+                  await updatePart({
+                    id: Identifier.ascending("part"),
+                    messageID: assistantMsg.id,
+                    sessionID: assistantMsg.sessionID,
+                    type: "snapshot",
+                    snapshot,
+                  })
+                break
 
-          case "tool-input-delta":
-            break
+              case "tool-input-start":
+                const part = await updatePart({
+                  id: Identifier.ascending("part"),
+                  messageID: assistantMsg.id,
+                  sessionID: assistantMsg.sessionID,
+                  type: "tool",
+                  tool: value.toolName,
+                  callID: value.id,
+                  state: {
+                    status: "pending",
+                  },
+                })
+                toolCalls[value.id] = part as MessageV2.ToolPart
+                break
 
-          case "tool-call": {
-            const match = toolCalls[value.toolCallId]
-            if (match) {
-              const part = await updatePart({
-                ...match,
-                state: {
-                  status: "running",
-                  input: value.input,
+              case "tool-input-delta":
+                break
+
+              case "tool-call": {
+                const match = toolCalls[value.toolCallId]
+                if (match) {
+                  const part = await updatePart({
+                    ...match,
+                    state: {
+                      status: "running",
+                      input: value.input,
+                      time: {
+                        start: Date.now(),
+                      },
+                    },
+                  })
+                  toolCalls[value.toolCallId] = part as MessageV2.ToolPart
+                }
+                break
+              }
+              case "tool-result": {
+                const match = toolCalls[value.toolCallId]
+                if (match && match.state.status === "running") {
+                  await updatePart({
+                    ...match,
+                    state: {
+                      status: "completed",
+                      input: value.input,
+                      output: value.output.output,
+                      metadata: value.output.metadata,
+                      title: value.output.title,
+                      time: {
+                        start: match.state.time.start,
+                        end: Date.now(),
+                      },
+                    },
+                  })
+                  delete toolCalls[value.toolCallId]
+                  const snapshot = await Snapshot.create(assistantMsg.sessionID)
+                  if (snapshot)
+                    await updatePart({
+                      id: Identifier.ascending("part"),
+                      messageID: assistantMsg.id,
+                      sessionID: assistantMsg.sessionID,
+                      type: "snapshot",
+                      snapshot,
+                    })
+                }
+                break
+              }
+
+              case "tool-error": {
+                const match = toolCalls[value.toolCallId]
+                if (match && match.state.status === "running") {
+                  await updatePart({
+                    ...match,
+                    state: {
+                      status: "error",
+                      input: value.input,
+                      error: (value.error as any).toString(),
+                      time: {
+                        start: match.state.time.start,
+                        end: Date.now(),
+                      },
+                    },
+                  })
+                  delete toolCalls[value.toolCallId]
+                  const snapshot = await Snapshot.create(assistantMsg.sessionID)
+                  if (snapshot)
+                    await updatePart({
+                      id: Identifier.ascending("part"),
+                      messageID: assistantMsg.id,
+                      sessionID: assistantMsg.sessionID,
+                      type: "snapshot",
+                      snapshot,
+                    })
+                }
+                break
+              }
+
+              case "error":
+                throw value.error
+
+              case "start-step":
+                await updatePart({
+                  id: Identifier.ascending("part"),
+                  messageID: assistantMsg.id,
+                  sessionID: assistantMsg.sessionID,
+                  type: "step-start",
+                })
+                break
+
+              case "finish-step":
+                const usage = getUsage(model, value.usage, value.providerMetadata)
+                assistantMsg.cost += usage.cost
+                assistantMsg.tokens = usage.tokens
+                await updatePart({
+                  id: Identifier.ascending("part"),
+                  messageID: assistantMsg.id,
+                  sessionID: assistantMsg.sessionID,
+                  type: "step-finish",
+                  tokens: usage.tokens,
+                  cost: usage.cost,
+                })
+                await updateMessage(assistantMsg)
+                break
+
+              case "text-start":
+                currentText = {
+                  id: Identifier.ascending("part"),
+                  messageID: assistantMsg.id,
+                  sessionID: assistantMsg.sessionID,
+                  type: "text",
+                  text: "",
                   time: {
                     start: Date.now(),
                   },
-                },
-              })
-              toolCalls[value.toolCallId] = part as MessageV2.ToolPart
-            }
-            break
-          }
-          case "tool-result": {
-            const match = toolCalls[value.toolCallId]
-            if (match && match.state.status === "running") {
-              await updatePart({
-                ...match,
-                state: {
-                  status: "completed",
-                  input: value.input,
-                  output: value.output.output,
-                  metadata: value.output.metadata,
-                  title: value.output.title,
-                  time: {
-                    start: match.state.time.start,
+                }
+                break
+
+              case "text":
+                if (currentText) {
+                  currentText.text += value.text
+                  await updatePart(currentText)
+                }
+                break
+
+              case "text-end":
+                if (currentText && currentText.text) {
+                  currentText.time = {
+                    start: Date.now(),
                     end: Date.now(),
-                  },
-                },
-              })
-              delete toolCalls[value.toolCallId]
+                  }
+                  await updatePart(currentText)
+                }
+                currentText = undefined
+                break
+
+              case "finish":
+                assistantMsg.time.completed = Date.now()
+                await updateMessage(assistantMsg)
+                break
+
+              default:
+                log.info("unhandled", {
+                  ...value,
+                })
+                continue
             }
-            break
           }
-
-          case "tool-error": {
-            const match = toolCalls[value.toolCallId]
-            if (match && match.state.status === "running") {
-              await updatePart({
-                ...match,
-                state: {
-                  status: "error",
-                  input: value.input,
-                  error: (value.error as any).toString(),
-                  time: {
-                    start: match.state.time.start,
-                    end: Date.now(),
-                  },
+        } catch (e) {
+          log.error("", {
+            error: e,
+          })
+          switch (true) {
+            case e instanceof DOMException && e.name === "AbortError":
+              assistantMsg.error = new MessageV2.AbortedError(
+                { message: e.message },
+                {
+                  cause: e,
                 },
-              })
-              delete toolCalls[value.toolCallId]
-            }
-            break
+              ).toObject()
+              break
+            case MessageV2.OutputLengthError.isInstance(e):
+              assistantMsg.error = e
+              break
+            case LoadAPIKeyError.isInstance(e):
+              assistantMsg.error = new MessageV2.AuthError(
+                {
+                  providerID: model.id,
+                  message: e.message,
+                },
+                { cause: e },
+              ).toObject()
+              break
+            case e instanceof Error:
+              assistantMsg.error = new NamedError.Unknown({ message: e.toString() }, { cause: e }).toObject()
+              break
+            default:
+              assistantMsg.error = new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e })
           }
-
-          case "error":
-            throw value.error
-
-          case "start-step":
-            await updatePart({
-              id: Identifier.ascending("part"),
-              messageID: assistantMsg.id,
-              sessionID: assistantMsg.sessionID,
-              type: "step-start",
-            })
-            break
-
-          case "finish-step":
-            const usage = getUsage(model, value.usage, value.providerMetadata)
-            assistantMsg.cost += usage.cost
-            assistantMsg.tokens = usage.tokens
-            await updatePart({
-              id: Identifier.ascending("part"),
-              messageID: assistantMsg.id,
-              sessionID: assistantMsg.sessionID,
-              type: "step-finish",
-              tokens: usage.tokens,
-              cost: usage.cost,
-            })
-            await updateMessage(assistantMsg)
-            break
-
-          case "text-start":
-            currentText = {
-              id: Identifier.ascending("part"),
-              messageID: assistantMsg.id,
-              sessionID: assistantMsg.sessionID,
-              type: "text",
-              text: "",
-              time: {
-                start: Date.now(),
-              },
-            }
-            break
-
-          case "text":
-            if (currentText) {
-              currentText.text += value.text
-              await updatePart(currentText)
-            }
-            break
-
-          case "text-end":
-            if (currentText && currentText.text) {
-              currentText.time = {
-                start: Date.now(),
-                end: Date.now(),
-              }
-              await updatePart(currentText)
-            }
-            currentText = undefined
-            break
-
-          case "finish":
-            assistantMsg.time.completed = Date.now()
-            await updateMessage(assistantMsg)
-            break
-
-          default:
-            log.info("unhandled", {
-              ...value,
-            })
-            continue
+          Bus.publish(Event.Error, {
+            sessionID: assistantMsg.sessionID,
+            error: assistantMsg.error,
+          })
         }
-      }
-    } catch (e) {
-      log.error("", {
-        error: e,
-      })
-      switch (true) {
-        case e instanceof DOMException && e.name === "AbortError":
-          assistantMsg.error = new MessageV2.AbortedError(
-            { message: e.message },
-            {
-              cause: e,
-            },
-          ).toObject()
-          break
-        case MessageV2.OutputLengthError.isInstance(e):
-          assistantMsg.error = e
-          break
-        case LoadAPIKeyError.isInstance(e):
-          assistantMsg.error = new Provider.AuthError(
-            {
-              providerID: model.id,
-              message: e.message,
-            },
-            { cause: e },
-          ).toObject()
-          break
-        case e instanceof Error:
-          assistantMsg.error = new NamedError.Unknown({ message: e.toString() }, { cause: e }).toObject()
-          break
-        default:
-          assistantMsg.error = new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e })
-      }
-      Bus.publish(Event.Error, {
-        sessionID: assistantMsg.sessionID,
-        error: assistantMsg.error,
-      })
+        const p = await parts(assistantMsg.sessionID, assistantMsg.id)
+        for (const part of p) {
+          if (part.type === "tool" && part.state.status !== "completed") {
+            updatePart({
+              ...part,
+              state: {
+                status: "error",
+                error: "Tool execution aborted",
+                time: {
+                  start: Date.now(),
+                  end: Date.now(),
+                },
+                input: {},
+              },
+            })
+          }
+        }
+        assistantMsg.time.completed = Date.now()
+        await updateMessage(assistantMsg)
+        return { info: assistantMsg, parts: p }
+      },
     }
-    const p = await parts(assistantMsg.sessionID, assistantMsg.id)
-    for (const part of p) {
-      if (part.type === "tool" && part.state.status !== "completed") {
-        updatePart({
-          ...part,
-          state: {
-            status: "error",
-            error: "Tool execution aborted",
-            time: {
-              start: Date.now(),
-              end: Date.now(),
-            },
-            input: {},
-          },
-        })
-      }
-    }
-    assistantMsg.time.completed = Date.now()
-    await updateMessage(assistantMsg)
-    return { info: assistantMsg, parts: p }
   }
 
   export async function revert(_input: { sessionID: string; messageID: string; part: number }) {
@@ -979,7 +1013,9 @@ export namespace Session {
     }
     await updateMessage(next)
 
-    const result = streamText({
+    const processor = createProcessor(next, model.info)
+    const stream = streamText({
+      maxRetries: 10,
       abortSignal: abort.signal,
       model: model.language,
       messages: [
@@ -1002,7 +1038,8 @@ export namespace Session {
       ],
     })
 
-    return processStream(next, model.info, result)
+    const result = await processor.process(stream)
+    return result
   }
 
   function lock(sessionID: string) {

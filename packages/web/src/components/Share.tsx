@@ -1,6 +1,7 @@
 import { For, Show, onMount, Suspense, onCleanup, createMemo, createSignal, SuspenseList, createEffect } from "solid-js"
 import { DateTime } from "luxon"
 import { createStore, reconcile, unwrap } from "solid-js/store"
+import { mapValues } from "remeda"
 import { IconArrowDown } from "./icons"
 import { IconOpencode } from "./icons/custom"
 import styles from "./share.module.css"
@@ -60,7 +61,7 @@ export default function Share(props: {
   const [store, setStore] = createStore<{
     info?: Session.Info
     messages: Record<string, MessageWithParts>
-  }>({ info: props.info, messages: props.messages })
+  }>({ info: props.info, messages: mapValues(props.messages, (x: any) => "metadata" in x ? fromV1(x) : x) })
   const messages = createMemo(() => Object.values(store.messages).toSorted((a, b) => a.id?.localeCompare(b.id)))
   const [connectionStatus, setConnectionStatus] = createSignal<[Status, string?]>(["disconnected", "Disconnected"])
   createEffect(() => {
@@ -340,6 +341,7 @@ export default function Share(props: {
                   const filteredParts = createMemo(() =>
                     msg.parts.filter((x, index) => {
                       if (x.type === "step-start" && index > 0) return false
+                      if (x.type === "snapshot") return false
                       if (x.type === "step-finish") return false
                       if (x.type === "text" && x.synthetic === true) return false
                       if (x.type === "tool" && x.tool === "todoread") return false
@@ -496,7 +498,15 @@ export function fromV1(v1: Message.Info): MessageWithParts {
       cost: v1.metadata.assistant!.cost,
       path: v1.metadata.assistant!.path,
       summary: v1.metadata.assistant!.summary,
-      tokens: v1.metadata.assistant!.tokens,
+      tokens: v1.metadata.assistant!.tokens ?? {
+        input: 0,
+        output: 0,
+        cache: {
+          read: 0,
+          write: 0,
+        },
+        reasoning: 0,
+      },
       modelID: v1.metadata.assistant!.modelID,
       providerID: v1.metadata.assistant!.providerID,
       system: v1.metadata.assistant!.system,

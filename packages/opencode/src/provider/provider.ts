@@ -22,7 +22,7 @@ import { AuthZerosync } from "../auth/zerosync"
 import { ModelsDev } from "./models"
 import { NamedError } from "../util/error"
 import { Auth } from "../auth"
-// import { TaskTool } from "../tool/task"
+import { TaskTool } from "../tool/task"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -437,6 +437,17 @@ export namespace Provider {
     }
   }
 
+  export async function getSmallModel(providerID: string) {
+    const provider = await state().then((state) => state.providers[providerID])
+    if (!provider) return
+    const priority = ["3-5-haiku", "3.5-haiku", "gemini-2.5-flash"]
+    for (const item of priority) {
+      for (const model of Object.keys(provider.info.models)) {
+        if (model.includes(item)) return getModel(providerID, model)
+      }
+    }
+  }
+
   const priority = ["gemini-2.5-pro-preview", "codex-mini", "claude-sonnet-4"]
   export function sort(models: ModelsDev.Model[]) {
     return sortBy(
@@ -485,7 +496,7 @@ export namespace Provider {
     WriteTool,
     TodoWriteTool,
     TodoReadTool,
-    // TaskTool,
+    TaskTool,
   ]
 
   const TOOL_MAPPING: Record<string, Tool.Info[]> = {
@@ -558,14 +569,6 @@ export namespace Provider {
     "ProviderInitError",
     z.object({
       providerID: z.string(),
-    }),
-  )
-
-  export const AuthError = NamedError.create(
-    "ProviderAuthError",
-    z.object({
-      providerID: z.string(),
-      message: z.string(),
     }),
   )
 }

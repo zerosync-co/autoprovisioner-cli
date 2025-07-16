@@ -27,8 +27,8 @@ import (
 
 type EditorComponent interface {
 	tea.Model
-	View(width int) string
-	Content(width int) string
+	tea.ViewModel
+	Content() string
 	Lines() int
 	Value() string
 	Length() int
@@ -46,6 +46,7 @@ type EditorComponent interface {
 
 type editorComponent struct {
 	app                    *app.App
+	width                  int
 	textarea               textarea.Model
 	spinner                spinner.Model
 	interruptKeyInDebounce bool
@@ -61,6 +62,12 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = min(msg.Width-4, app.MAX_CONTAINER_WIDTH)
+		if m.app.Config.Layout == opencode.LayoutConfigStretch {
+			m.width = msg.Width - 4
+		}
+		return m, nil
 	case spinner.TickMsg:
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
@@ -142,9 +149,9 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner = createSpinner()
 		return m, tea.Batch(m.spinner.Tick, m.textarea.Focus())
 	case dialog.CompletionSelectedMsg:
-		switch msg.Item.GetProviderID() {
+		switch msg.Item.ProviderID {
 		case "commands":
-			commandName := strings.TrimPrefix(msg.Item.GetValue(), "/")
+			commandName := strings.TrimPrefix(msg.Item.Value, "/")
 			updated, cmd := m.Clear()
 			m = updated.(*editorComponent)
 			cmds = append(cmds, cmd)
@@ -154,7 +161,7 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			atIndex := m.textarea.LastRuneIndex('@')
 			if atIndex == -1 {
 				// Should not happen, but as a fallback, just insert.
-				m.textarea.InsertString(msg.Item.GetValue() + " ")
+				m.textarea.InsertString(msg.Item.Value + " ")
 				return m, nil
 			}
 
@@ -165,7 +172,7 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// Now, insert the attachment at the position where the '@' was.
 			// The cursor is now at `atIndex` after the replacement.
-			filePath := msg.Item.GetValue()
+			filePath := msg.Item.Value
 			extension := filepath.Ext(filePath)
 			mediaType := ""
 			switch extension {
@@ -192,20 +199,20 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			atIndex := m.textarea.LastRuneIndex('@')
 			if atIndex == -1 {
 				// Should not happen, but as a fallback, just insert.
-				m.textarea.InsertString(msg.Item.GetValue() + " ")
+				m.textarea.InsertString(msg.Item.Value + " ")
 				return m, nil
 			}
 
 			cursorCol := m.textarea.CursorColumn()
 			m.textarea.ReplaceRange(atIndex, cursorCol, "")
 
-			symbol := msg.Item.GetRaw().(opencode.Symbol)
+			symbol := msg.Item.RawData.(opencode.Symbol)
 			parts := strings.Split(symbol.Name, ".")
 			lastPart := parts[len(parts)-1]
 			attachment := &textarea.Attachment{
 				ID:        uuid.NewString(),
 				Display:   "@" + lastPart,
-				URL:       msg.Item.GetValue(),
+				URL:       msg.Item.Value,
 				Filename:  lastPart,
 				MediaType: "text/plain",
 			}
@@ -213,7 +220,7 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textarea.InsertString(" ")
 			return m, nil
 		default:
-			slog.Debug("Unknown provider", "provider", msg.Item.GetProviderID())
+			slog.Debug("Unknown provider", "provider", msg.Item.ProviderID)
 			return m, nil
 		}
 	}
@@ -227,7 +234,7 @@ func (m *editorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m *editorComponent) Content(width int) string {
+func (m *editorComponent) Content() string {
 	t := theme.CurrentTheme()
 	base := styles.NewStyle().Foreground(t.Text()).Background(t.Background()).Render
 	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
@@ -236,7 +243,7 @@ func (m *editorComponent) Content(width int) string {
 		Bold(true)
 	prompt := promptStyle.Render(">")
 
-	m.textarea.SetWidth(width - 6)
+	m.textarea.SetWidth(m.width - 6)
 	textarea := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		prompt,
@@ -248,7 +255,7 @@ func (m *editorComponent) Content(width int) string {
 	}
 	textarea = styles.NewStyle().
 		Background(t.BackgroundElement()).
-		Width(width).
+		Width(m.width).
 		PaddingTop(1).
 		PaddingBottom(1).
 		BorderStyle(lipgloss.ThickBorder()).
@@ -284,7 +291,7 @@ func (m *editorComponent) Content(width int) string {
 		model = muted(m.app.Provider.Name) + base(" "+m.app.Model.Name)
 	}
 
-	space := width - 2 - lipgloss.Width(model) - lipgloss.Width(hint)
+	space := m.width - 2 - lipgloss.Width(model) - lipgloss.Width(hint)
 	spacer := styles.NewStyle().Background(t.Background()).Width(space).Render("")
 
 	info := hint + spacer + model
@@ -294,10 +301,10 @@ func (m *editorComponent) Content(width int) string {
 	return content
 }
 
-func (m *editorComponent) View(width int) string {
+func (m *editorComponent) View() string {
 	if m.Lines() > 1 {
 		return lipgloss.Place(
-			width,
+			m.width,
 			5,
 			lipgloss.Center,
 			lipgloss.Center,
@@ -305,7 +312,7 @@ func (m *editorComponent) View(width int) string {
 			styles.WhitespaceStyle(theme.CurrentTheme().Background()),
 		)
 	}
-	return m.Content(width)
+	return m.Content()
 }
 
 func (m *editorComponent) Focused() bool {
