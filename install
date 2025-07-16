@@ -55,7 +55,7 @@ if [ -z "$requested_version" ]; then
         exit 1
     fi
 else
-    url="https://github.com/sst/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/download/v${requested_version}/$filename"
+    url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${requested_version}/$filename"
     specific_version=$requested_version
 fi
 
