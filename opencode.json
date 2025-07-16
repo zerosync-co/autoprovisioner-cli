@@ -6,7 +6,7 @@
       "name": "ZeroSync",
       "npm": "@ai-sdk/anthropic",
       "options": {
-        "baseURL": "http://0.0.0.0:8787/v1"
+        "baseURL": "https://llm-provider-proxy.alex-dunne.workers.dev/v1"
       },
       "models": {
         "claude-sonnet-4-20250514": {
