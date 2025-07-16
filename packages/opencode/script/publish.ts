@@ -4,6 +4,10 @@ import { $ } from "bun"
 
 import pkg from "../package.json"
 
+// const APP = "autoprovisioner"
+const GITHUB_OWNER = "zerosync-co"
+const GITHUB_REPOSITORY = "autoprovisioner-cli"
+
 const dry = process.argv.includes("--dry")
 const snapshot = process.argv.includes("--snapshot")
 
@@ -35,7 +39,7 @@ const targets = [
 await $`rm -rf dist`
 
 const optionalDependencies: Record<string, string> = {}
-const npmTag = snapshot ? "snapshot" : "latest"
+// const npmTag = snapshot ? "snapshot" : "latest"
 for (const [os, arch] of targets) {
   console.log(`building ${os}-${arch}`)
   const name = `${pkg.name}-${os}-${arch}`
@@ -57,7 +61,7 @@ for (const [os, arch] of targets) {
       2,
     ),
   )
-  if (!dry) await $`cd dist/${name} && bun publish --access public --tag ${npmTag}`
+  // if (!dry) await $`cd dist/${name} && bun publish --access public --tag ${npmTag}`
   optionalDependencies[name] = version
 }
 
@@ -81,7 +85,7 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
     2,
   ),
 )
-if (!dry) await $`cd ./dist/${pkg.name} && bun publish --access public --tag ${npmTag}`
+// if (!dry) await $`cd ./dist/${pkg.name} && bun publish --access public --tag ${npmTag}`
 
 if (!snapshot) {
   // Github Release
@@ -89,11 +93,13 @@ if (!snapshot) {
     await $`cd dist/${key}/bin && zip -r ../../${key}.zip *`
   }
 
-  const previous = await fetch("https://api.github.com/repos/sst/opencode/releases/latest")
+  const previous = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/latest`)
     .then((res) => res.json())
     .then((data) => data.tag_name)
 
-  const commits = await fetch(`https://api.github.com/repos/sst/opencode/compare/${previous}...HEAD`)
+  const commits = await fetch(
+    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/compare/${previous}...HEAD`,
+  )
     .then((res) => res.json())
     .then((data) => data.commits || [])
 
@@ -115,105 +121,105 @@ if (!snapshot) {
   if (!dry) await $`gh release create v${version} --title "v${version}" --notes ${notes} ./dist/*.zip`
 
   // Calculate SHA values
-  const arm64Sha = await $`sha256sum ./dist/opencode-linux-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  const x64Sha = await $`sha256sum ./dist/opencode-linux-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macX64Sha = await $`sha256sum ./dist/opencode-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  const macArm64Sha = await $`sha256sum ./dist/opencode-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // const arm64Sha = await $`sha256sum ./dist/${APP}-linux-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // const x64Sha = await $`sha256sum ./dist/${APP}-linux-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // const macX64Sha = await $`sha256sum ./dist/${APP}-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
+  // const macArm64Sha = await $`sha256sum ./dist/${APP}-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
 
   // AUR package
-  const pkgbuild = [
-    "# Maintainer: dax",
-    "# Maintainer: adam",
-    "",
-    "pkgname='${pkg}'",
-    `pkgver=${version.split("-")[0]}`,
-    "options=('!debug' '!strip')",
-    "pkgrel=1",
-    "pkgdesc='The AI coding agent built for the terminal.'",
-    "url='https://github.com/sst/opencode'",
-    "arch=('aarch64' 'x86_64')",
-    "license=('MIT')",
-    "provides=('opencode')",
-    "conflicts=('opencode')",
-    "depends=('fzf' 'ripgrep')",
-    "",
-    `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.zip::https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-arm64.zip")`,
-    `sha256sums_aarch64=('${arm64Sha}')`,
-    "",
-    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.zip::https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64.zip")`,
-    `sha256sums_x86_64=('${x64Sha}')`,
-    "",
-    "package() {",
-    '  install -Dm755 ./opencode "${pkgdir}/usr/bin/opencode"',
-    "}",
-    "",
-  ].join("\n")
+  // const pkgbuild = [
+  //   "# Maintainer: dax",
+  //   "# Maintainer: adam",
+  //   "",
+  //   "pkgname='${pkg}'",
+  //   `pkgver=${version.split("-")[0]}`,
+  //   "options=('!debug' '!strip')",
+  //   "pkgrel=1",
+  //   "pkgdesc='The AI coding agent built for the terminal.'",
+  //   `url='https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}'`,
+  //   "arch=('aarch64' 'x86_64')",
+  //   "license=('MIT')",
+  //   `provides=('${APP}')`,
+  //   `conflicts=('${APP}')`,
+  //   "depends=('fzf' 'ripgrep')",
+  //   "",
+  //   `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.zip::https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-linux-arm64.zip")`,
+  //   `sha256sums_aarch64=('${arm64Sha}')`,
+  //   "",
+  //   `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.zip::https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-linux-x64.zip")`,
+  //   `sha256sums_x86_64=('${x64Sha}')`,
+  //   "",
+  //   "package() {",
+  //   `  install -Dm755 ./${APP} "\${pkgdir}/usr/bin/${APP}"`,
+  //   "}",
+  //   "",
+  // ].join("\n")
 
-  for (const pkg of ["opencode", "opencode-bin"]) {
-    await $`rm -rf ./dist/aur-${pkg}`
-    await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
-    await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild.replace("${pkg}", pkg))
-    await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
-    await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
-    await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${version}"`
-    if (!dry) await $`cd ./dist/aur-${pkg} && git push`
-  }
+  // for (const pkg of [APP, `${APP}-bin`]) {
+  //   await $`rm -rf ./dist/aur-${pkg}`
+  //   await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
+  //   await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild.replace("${pkg}", pkg))
+  //   await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
+  //   await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
+  //   await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${version}"`
+  //   if (!dry) await $`cd ./dist/aur-${pkg} && git push`
+  // }
 
   // Homebrew formula
-  const homebrewFormula = [
-    "# typed: false",
-    "# frozen_string_literal: true",
-    "",
-    "# This file was generated by GoReleaser. DO NOT EDIT.",
-    "class Opencode < Formula",
-    `  desc "The AI coding agent built for the terminal."`,
-    `  homepage "https://github.com/sst/opencode"`,
-    `  version "${version.split("-")[0]}"`,
-    "",
-    "  on_macos do",
-    "    if Hardware::CPU.intel?",
-    `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-darwin-x64.zip"`,
-    `      sha256 "${macX64Sha}"`,
-    "",
-    "      def install",
-    '        bin.install "opencode"',
-    "      end",
-    "    end",
-    "    if Hardware::CPU.arm?",
-    `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-darwin-arm64.zip"`,
-    `      sha256 "${macArm64Sha}"`,
-    "",
-    "      def install",
-    '        bin.install "opencode"',
-    "      end",
-    "    end",
-    "  end",
-    "",
-    "  on_linux do",
-    "    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64.zip"`,
-    `      sha256 "${x64Sha}"`,
-    "      def install",
-    '        bin.install "opencode"',
-    "      end",
-    "    end",
-    "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-arm64.zip"`,
-    `      sha256 "${arm64Sha}"`,
-    "      def install",
-    '        bin.install "opencode"',
-    "      end",
-    "    end",
-    "  end",
-    "end",
-    "",
-    "",
-  ].join("\n")
+  // const homebrewFormula = [
+  //   "# typed: false",
+  //   "# frozen_string_literal: true",
+  //   "",
+  //   "# This file was generated by GoReleaser. DO NOT EDIT.",
+  //   `class ${APP.charAt(0).toUpperCase() + APP.slice(1)} < Formula`,
+  //   `  desc "The AI coding agent built for the terminal."`,
+  //   `  homepage "https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}"`,
+  //   `  version "${version.split("-")[0]}"`,
+  //   "",
+  //   "  on_macos do",
+  //   "    if Hardware::CPU.intel?",
+  //   `      url "https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-darwin-x64.zip"`,
+  //   `      sha256 "${macX64Sha}"`,
+  //   "",
+  //   "      def install",
+  //   `        bin.install "${APP}"`,
+  //   "      end",
+  //   "    end",
+  //   "    if Hardware::CPU.arm?",
+  //   `      url "https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-darwin-arm64.zip"`,
+  //   `      sha256 "${macArm64Sha}"`,
+  //   "",
+  //   "      def install",
+  //   `        bin.install "${APP}"`,
+  //   "      end",
+  //   "    end",
+  //   "  end",
+  //   "",
+  //   "  on_linux do",
+  //   "    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?",
+  //   `      url "https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-linux-x64.zip"`,
+  //   `      sha256 "${x64Sha}"`,
+  //   "      def install",
+  //   `        bin.install "${APP}"`,
+  //   "      end",
+  //   "    end",
+  //   "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
+  //   `      url "https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/download/v${version}/${APP}-linux-arm64.zip"`,
+  //   `      sha256 "${arm64Sha}"`,
+  //   "      def install",
+  //   `        bin.install "${APP}"`,
+  //   "      end",
+  //   "    end",
+  //   "  end",
+  //   "end",
+  //   "",
+  //   "",
+  // ].join("\n")
 
-  await $`rm -rf ./dist/homebrew-tap`
-  await $`git clone https://${process.env["GITHUB_TOKEN"]}@github.com/sst/homebrew-tap.git ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/opencode.rb").write(homebrewFormula)
-  await $`cd ./dist/homebrew-tap && git add opencode.rb`
-  await $`cd ./dist/homebrew-tap && git commit -m "Update to v${version}"`
-  if (!dry) await $`cd ./dist/homebrew-tap && git push`
+  // await $`rm -rf ./dist/homebrew-tap`
+  // await $`git clone https://${process.env["GITHUB_TOKEN"]}@github.com/${GITHUB_OWNER}/homebrew-tap.git ./dist/homebrew-tap`
+  // await Bun.file(`./dist/homebrew-tap/${APP}.rb`).write(homebrewFormula)
+  // await $`cd ./dist/homebrew-tap && git add ${APP}.rb`
+  // await $`cd ./dist/homebrew-tap && git commit -m "Update to v${version}"`
+  // if (!dry) await $`cd ./dist/homebrew-tap && git push`
 }
