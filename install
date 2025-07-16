@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP=opencode
+APP=autoprovisioner
+GITHUB_OWNER=zerosync-co
+GITHUB_REPOSITORY=autoprovisioner-cli
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -41,19 +43,19 @@ case "$filename" in
     ;;
 esac
 
-INSTALL_DIR=$HOME/.opencode/bin
+INSTALL_DIR=$HOME/.${APP}/bin
 mkdir -p "$INSTALL_DIR"
 
 if [ -z "$requested_version" ]; then
-    url="https://github.com/sst/opencode/releases/latest/download/$filename"
-    specific_version=$(curl -s https://api.github.com/repos/sst/opencode/releases/latest | awk -F'"' '/"tag_name": "/ {gsub(/^v/, "", $4); print $4}')
+    url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/latest/download/$filename"
+    specific_version=$(curl -s https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/latest | awk -F'"' '/"tag_name": "/ {gsub(/^v/, "", $4); print $4}')
 
     if [[ $? -ne 0 ]]; then
         echo "${RED}Failed to fetch version information${NC}"
         exit 1
     fi
 else
-    url="https://github.com/sst/opencode/releases/download/v${requested_version}/$filename"
+    url="https://github.com/sst/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/download/v${requested_version}/$filename"
     specific_version=$requested_version
 fi
 
@@ -72,8 +74,8 @@ print_message() {
 }
 
 check_version() {
-    if command -v opencode >/dev/null 2>&1; then
-        opencode_path=$(which opencode)
+    if command -v $APP >/dev/null 2>&1; then
+        app_path=$(which $APP)
 
 
         ## TODO: check if version is installed
@@ -91,12 +93,12 @@ check_version() {
 }
 
 download_and_install() {
-    print_message info "Downloading ${ORANGE}opencode ${GREEN}version: ${YELLOW}$specific_version ${GREEN}..."
-    mkdir -p opencodetmp && cd opencodetmp
+    print_message info "Downloading ${ORANGE}${APP} ${GREEN}version: ${YELLOW}$specific_version ${GREEN}..."
+    mkdir -p apptemp && cd apptemp
     curl -# -L -o "$filename" "$url"
     unzip -q "$filename"
-    mv opencode "$INSTALL_DIR"
-    cd .. && rm -rf opencodetmp 
+    mv ${APP} "$INSTALL_DIR"
+    cd .. && rm -rf apptemp
 }
 
 check_version
@@ -110,9 +112,9 @@ add_to_path() {
     if grep -Fxq "$command" "$config_file"; then
         print_message info "Command already exists in $config_file, skipping write."
     elif [[ -w $config_file ]]; then
-        echo -e "\n# opencode" >> "$config_file"
+        echo -e "\n# ${APP}" >> "$config_file"
         echo "$command" >> "$config_file"
-        print_message info "Successfully added ${ORANGE}opencode ${GREEN}to \$PATH in $config_file"
+        print_message info "Successfully added ${ORANGE}${APP} ${GREEN}to \$PATH in $config_file"
     else
         print_message warning "Manually add the directory to $config_file (or similar):"
         print_message info "  $command"
@@ -186,4 +188,3 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     echo "$INSTALL_DIR" >> $GITHUB_PATH
     print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
 fi
-
