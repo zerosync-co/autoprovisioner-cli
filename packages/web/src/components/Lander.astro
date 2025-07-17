@@ -17,11 +17,11 @@ const imageAttrs = {
     alt: image?.alt || '',
 };
 
-const github = config.social.filter(s => s.icon === 'github')[0];
+// const github = config.social.filter(s => s.icon === 'github')[0];
 
 const command = "curl -fsSL"
 const protocol = "https://"
-const url = "opencode.ai/install"
+const url = "cli.autoprovisioner.ai/install"
 const bash = "| bash"
 
 let darkImage: ImageMetadata | undefined;
@@ -40,15 +40,10 @@ if (image) {
 ---
 <div class="hero">
     <section class="top">
-      <div class="logo">
-        <Image
-          src={darkImage}
-          {...imageAttrs}
-          class:list={{ 'light:sl-hidden': Boolean(lightImage) }}
-        />
-        <Image src={lightImage} {...imageAttrs} class="dark:sl-hidden" />
-      </div>
-      <h1>The AI coding agent built for the terminal.</h1>
+      <h1 class="logo">
+        AutoProvisioner
+      </h1>
+      <div>The AI coding agent built for the terminal.</div>
     </section>
 
     <section class="cta">
@@ -67,7 +62,7 @@ if (image) {
         </button>
       </div>
       <div class="col3">
-        <a href={github.href}>GitHub</a>
+        <a href="https://github.com/zerosync-co/autoprovisioner-cli">GitHub</a>
       </div>
     </section>
 
@@ -76,17 +71,7 @@ if (image) {
         <li><b>Native TUI</b>: A responsive, native, themeable terminal UI.</li>
         <li><b>LSP enabled</b>: Automatically loads the right LSPs for the LLM.</li>
         <li><b>Multi-session</b>: Start multiple agents in parallel on the same project.</li>
-        <li><b>Shareable links</b>: Share a link to any sessions for reference or to debug.</li>
-        <li><b>Claude Pro</b>: Log in with Anthropic to use your Claude Pro or Max account.</li>
-        <li><b>Use any model</b>: Supports 75+ LLM providers through <a href="https://models.dev">Models.dev</a>, including local models.</li>
       </ul>
-    </section>
-
-    <section class="images">
-      <div>
-        <p>opencode TUI with the tokyonight theme</p>
-        <Image width={600} src={Screenshot} alt="opencode TUI with the tokyonight theme" />
-      </div>
     </section>
 
     <section class="footer">
@@ -94,7 +79,7 @@ if (image) {
         <span>Version: Beta</span>
       </div>
       <div class="col2">
-        <span>Author: <a href="https://sst.dev">SST</a></span>
+        <span>Author: <a href="https://zerosync.co">ZeroSync</a></span>
       </div>
     </section>
 </div>

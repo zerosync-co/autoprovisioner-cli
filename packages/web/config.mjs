@@ -1,12 +1,8 @@
 const stage = process.env.SST_STAGE || "dev"
 
 export default {
-  url: stage === "production"
-    ? "https://opencode.ai"
-    : `https://${stage}.opencode.ai`,
-  socialCard: "https://social-cards.sst.dev",
-  github: "https://github.com/sst/opencode",
-  discord: "https://opencode.ai/discord",
+  url: "https://docs.autoprovisioner.ai",
+  github: "https://github.com/zerosync-co/autoprovisioner-cli",
   headerLinks: [
     { name: "Home", url: "/" },
     { name: "Docs", url: "/docs/" },

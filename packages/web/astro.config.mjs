@@ -9,8 +9,6 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
 import { spawnSync } from "child_process"
 
-const github = "https://github.com/sst/opencode"
-
 // https://astro.build/config
 export default defineConfig({
   site: config.url,
@@ -29,16 +27,13 @@ export default defineConfig({
   },
   build: {},
   integrations: [
-    configSchema(),
     solidJs(),
     starlight({
-      title: "opencode",
+      title: "autoprovisioner",
       lastUpdated: true,
+      pagefind: true,
       expressiveCode: { themes: ["github-light", "github-dark"] },
-      social: [
-        { icon: "github", label: "GitHub", href: config.github },
-        { icon: "discord", label: "Dscord", href: config.discord },
-      ],
+      social: [{ icon: "github", label: "GitHub", href: config.github }],
       head: [
         {
           tag: "link",
@@ -49,35 +44,18 @@ export default defineConfig({
         },
       ],
       editLink: {
-        baseUrl: `${github}/edit/dev/packages/web/`,
+        baseUrl: `https://github.com/zerosync-co/autoprovisioner-cli/edit/dev/packages/web/`,
       },
       markdown: {
         headingLinks: false,
       },
       customCss: ["./src/styles/custom.css"],
-      logo: {
-        light: "./src/assets/logo-light.svg",
-        dark: "./src/assets/logo-dark.svg",
-        replacesTitle: true,
-      },
-      sidebar: [
-        "docs",
-        "docs/cli",
-        "docs/share",
-        "docs/modes",
-        "docs/rules",
-        "docs/config",
-        "docs/models",
-        "docs/themes",
-        "docs/keybinds",
-        "docs/enterprise",
-        "docs/mcp-servers",
-        "docs/troubleshooting",
-      ],
+      sidebar: ["docs", "docs/cli", "docs/troubleshooting"],
       components: {
         Hero: "./src/components/Hero.astro",
         Head: "./src/components/Head.astro",
         Header: "./src/components/Header.astro",
+        Footer: "./src/components/Footer.astro",
       },
       plugins: [
         theme({
@@ -86,19 +64,16 @@ export default defineConfig({
       ],
     }),
   ],
-  redirects: {
-    "/discord": "https://discord.gg/opencode",
-  },
 })
 
-function configSchema() {
-  return {
-    name: "configSchema",
-    hooks: {
-      "astro:build:done": async () => {
-        console.log("generating config schema")
-        spawnSync("../opencode/script/schema.ts", ["./dist/config.json"])
-      },
-    },
-  }
-}
+// function configSchema() {
+//   return {
+//     name: "configSchema",
+//     hooks: {
+//       "astro:build:done": async () => {
+//         console.log("generating config schema")
+//         spawnSync("../opencode/script/schema.ts", ["./dist/config.json"])
+//       },
+//     },
+//   }
+// }
