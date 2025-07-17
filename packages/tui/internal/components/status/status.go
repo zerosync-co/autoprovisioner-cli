@@ -5,10 +5,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea/v2"
-	"github.com/charmbracelet/lipgloss/v2"
-	"github.com/charmbracelet/lipgloss/v2/compat"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/sst/opencode/internal/app"
-	"github.com/sst/opencode/internal/commands"
 	"github.com/sst/opencode/internal/styles"
 	"github.com/sst/opencode/internal/theme"
 )
@@ -46,8 +44,8 @@ func (m statusComponent) logo() string {
 		Bold(true).
 		Render
 
-	open := base("open")
-	code := emphasis("code ")
+	open := base("auto")
+	code := emphasis("provisioner ")
 	version := base(m.app.Version)
 	return styles.NewStyle().
 		Background(t.BackgroundElement()).
@@ -65,68 +63,69 @@ func (m statusComponent) View() string {
 		Padding(0, 1).
 		Render(m.cwd)
 
-	var modeBackground compat.AdaptiveColor
-	var modeForeground compat.AdaptiveColor
-	switch m.app.ModeIndex {
-	case 0:
-		modeBackground = t.BackgroundElement()
-		modeForeground = t.TextMuted()
-	case 1:
-		modeBackground = t.Secondary()
-		modeForeground = t.BackgroundPanel()
-	case 2:
-		modeBackground = t.Accent()
-		modeForeground = t.BackgroundPanel()
-	case 3:
-		modeBackground = t.Success()
-		modeForeground = t.BackgroundPanel()
-	case 4:
-		modeBackground = t.Warning()
-		modeForeground = t.BackgroundPanel()
-	case 5:
-		modeBackground = t.Primary()
-		modeForeground = t.BackgroundPanel()
-	case 6:
-		modeBackground = t.Error()
-		modeForeground = t.BackgroundPanel()
-	default:
-		modeBackground = t.Secondary()
-		modeForeground = t.BackgroundPanel()
-	}
+	// var modeBackground compat.AdaptiveColor
+	// var modeForeground compat.AdaptiveColor
+	// switch m.app.ModeIndex {
+	// case 0:
+	// 	modeBackground = t.BackgroundElement()
+	// 	modeForeground = t.TextMuted()
+	// case 1:
+	// 	modeBackground = t.Secondary()
+	// 	modeForeground = t.BackgroundPanel()
+	// case 2:
+	// 	modeBackground = t.Accent()
+	// 	modeForeground = t.BackgroundPanel()
+	// case 3:
+	// 	modeBackground = t.Success()
+	// 	modeForeground = t.BackgroundPanel()
+	// case 4:
+	// 	modeBackground = t.Warning()
+	// 	modeForeground = t.BackgroundPanel()
+	// case 5:
+	// 	modeBackground = t.Primary()
+	// 	modeForeground = t.BackgroundPanel()
+	// case 6:
+	// 	modeBackground = t.Error()
+	// 	modeForeground = t.BackgroundPanel()
+	// default:
+	// 	modeBackground = t.Secondary()
+	// 	modeForeground = t.BackgroundPanel()
+	// }
 
-	command := m.app.Commands[commands.SwitchModeCommand]
-	kb := command.Keybindings[0]
-	key := kb.Key
-	if kb.RequiresLeader {
-		key = m.app.Config.Keybinds.Leader + " " + kb.Key
-	}
+	// command := m.app.Commands[commands.SwitchModeCommand]
+	// kb := command.Keybindings[0]
+	// key := kb.Key
+	// if kb.RequiresLeader {
+	// 	key = m.app.Config.Keybinds.Leader + " " + kb.Key
+	// }
 
-	modeStyle := styles.NewStyle().Background(modeBackground).Foreground(modeForeground)
-	modeNameStyle := modeStyle.Bold(true).Render
-	modeDescStyle := modeStyle.Render
-	mode := modeNameStyle(strings.ToUpper(m.app.Mode.Name)) + modeDescStyle(" MODE")
-	mode = modeStyle.
-		Padding(0, 1).
-		BorderLeft(true).
-		BorderStyle(lipgloss.ThickBorder()).
-		BorderForeground(modeBackground).
-		BorderBackground(t.BackgroundPanel()).
-		Render(mode)
+	// modeStyle := styles.NewStyle().Background(modeBackground).Foreground(modeForeground)
+	// modeNameStyle := modeStyle.Bold(true).Render
+	// modeDescStyle := modeStyle.Render
+	// mode := modeNameStyle(strings.ToUpper(m.app.Mode.Name)) + modeDescStyle(" MODE")
+	// mode = modeStyle.
+	// 	Padding(0, 1).
+	// 	BorderLeft(true).
+	// 	BorderStyle(lipgloss.ThickBorder()).
+	// 	BorderForeground(modeBackground).
+	// 	BorderBackground(t.BackgroundPanel()).
+	// 	Render(mode)
 
-	mode = styles.NewStyle().
-		Faint(true).
-		Background(t.BackgroundPanel()).
-		Foreground(t.TextMuted()).
-		Render(key+" ") +
-		mode
+	// mode = styles.NewStyle().
+	// 	Faint(true).
+	// 	Background(t.BackgroundPanel()).
+	// 	Foreground(t.TextMuted()).
+	// 	Render(key+" ") +
+	// 	mode
 
 	space := max(
 		0,
-		m.width-lipgloss.Width(logo)-lipgloss.Width(cwd)-lipgloss.Width(mode),
+		m.width-lipgloss.Width(logo)-lipgloss.Width(cwd),
 	)
 	spacer := styles.NewStyle().Background(t.BackgroundPanel()).Width(space).Render("")
 
-	status := logo + cwd + spacer + mode
+	// status := logo + cwd + spacer + mode
+	status := logo + cwd + spacer
 
 	blank := styles.NewStyle().Background(t.Background()).Width(m.width).Render("")
 	return blank + "\n" + status

@@ -1,0 +1,8 @@
+name = "opencode-web"
+compatibility_date = "2025-07-16"
+
+[assets]
+directory = "./dist"
+
+[observability.logs]
+enabled = true

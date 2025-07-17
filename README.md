@@ -21,13 +21,7 @@
 ### Installation
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
-
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-brew install sst/tap/opencode      # macOS
-paru -S opencode-bin               # Arch Linux
+curl -fsSL https://raw.githubusercontent.com/zerosync-co/autoprovisioner-cli/refs/heads/dev/install | bash
 ```
 
 > [!TIP]

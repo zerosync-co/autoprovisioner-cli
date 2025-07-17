@@ -548,7 +548,7 @@ export namespace Session {
 
     const mode = await Mode.get(input.mode ?? "build")
     let system = input.providerID === "anthropic" ? [PROMPT_ANTHROPIC_SPOOF.trim()] : []
-    system.push(...(mode.prompt ? [mode.prompt] : SystemPrompt.provider(input.modelID)))
+    system.push(...(mode.prompt ? [mode.prompt] : SystemPrompt.provider(input.providerID, input.modelID)))
     system.push(...(await SystemPrompt.environment()))
     system.push(...(await SystemPrompt.custom()))
     // max 2 system prompt messages for caching purposes

@@ -9,12 +9,17 @@ import { Global } from "../global"
 import fs from "fs/promises"
 import { lazy } from "../util/lazy"
 import { NamedError } from "../util/error"
+import { defaultProviders, defaultModel } from "./defaults"
 
 export namespace Config {
   const log = Log.create({ service: "config" })
 
   export const state = App.state("config", async (app) => {
     let result = await global()
+
+    // Merge default providers
+    result = mergeDeep({ provider: defaultProviders }, result)
+
     for (const file of ["opencode.jsonc", "opencode.json"]) {
       const found = await Filesystem.findUp(file, app.path.cwd, app.path.root)
       for (const resolved of found.toReversed()) {
@@ -33,6 +38,9 @@ export namespace Config {
     }
     if (!result.layout) {
       result.layout = "auto"
+    }
+    if (!result.model) {
+      result.model = defaultModel
     }
 
     log.info("loaded", result)

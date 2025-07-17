@@ -9,6 +9,9 @@ declare global {
   const OPENCODE_VERSION: string
 }
 
+const GITHUB_OWNER = "zerosync-co"
+const GITHUB_REPOSITORY = "autoprovisioner-cli"
+
 export namespace Installation {
   const log = Log.create({ service: "installation" })
 
@@ -49,7 +52,7 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".opencode", "bin"))) return "curl"
+    if (process.execPath.includes(path.join(".autoprovisioner", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
     const checks = [
@@ -104,20 +107,22 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
-          return $`curl -fsSL https://opencode.ai/install | bash`.env({
-            ...process.env,
-            VERSION: target,
-          })
-        case "npm":
-          return $`npm install -g opencode-ai@${target}`
-        case "pnpm":
-          return $`pnpm install -g opencode-ai@${target}`
-        case "bun":
-          return $`bun install -g opencode-ai@${target}`
-        case "brew":
-          return $`brew install sst/tap/opencode`.env({
-            HOMEBREW_NO_AUTO_UPDATE: "1",
-          })
+          return $`curl -fsSL https://raw.githubusercontent.com/zerosync-co/autoprovisioner-cli/refs/heads/dev/install | bash`.env(
+            {
+              ...process.env,
+              VERSION: target,
+            },
+          )
+        // case "npm":
+        //   return $`npm install -g opencode-ai@${target}`
+        // case "pnpm":
+        //   return $`pnpm install -g opencode-ai@${target}`
+        // case "bun":
+        //   return $`bun install -g opencode-ai@${target}`
+        // case "brew":
+        //   return $`brew install sst/tap/opencode`.env({
+        //     HOMEBREW_NO_AUTO_UPDATE: "1",
+        //   })
         default:
           throw new Error(`Unknown method: ${method}`)
       }
@@ -138,7 +143,7 @@ export namespace Installation {
   export const VERSION = typeof OPENCODE_VERSION === "string" ? OPENCODE_VERSION : "dev"
 
   export async function latest() {
-    return fetch("https://api.github.com/repos/sst/opencode/releases/latest")
+    return fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPOSITORY}/releases/latest`)
       .then((res) => res.json())
       .then((data) => {
         if (typeof data.tag_name !== "string") {

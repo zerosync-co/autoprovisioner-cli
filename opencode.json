@@ -1,32 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "zerosync/claude-sonnet-4-20250514",
-  "provider": {
-    "zerosync": {
-      "name": "ZeroSync",
-      "npm": "@ai-sdk/anthropic",
-      "options": {
-        "baseURL": "https://llm-provider-proxy.alex-dunne.workers.dev/v1"
-      },
-      "models": {
-        "claude-sonnet-4-20250514": {
-          "name": "Claude Sonnet 4",
-          "attachment": true,
-          "reasoning": false,
-          "temperature": true,
-          "tool_call": true,
-          "cost": {
-            "input": 0,
-            "output": 0,
-            "cache_read": 0,
-            "cache_write": 0
-          },
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          }
-        }
-      }
+  "mcp": {
+    "weather": {
+      "type": "local",
+      "command": ["opencode", "x", "@h1deya/mcp-server-weather"]
     }
   }
 }
