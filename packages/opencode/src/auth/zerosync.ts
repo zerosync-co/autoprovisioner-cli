@@ -4,8 +4,7 @@ import open from "open"
 export namespace AuthZerosync {
   export async function access() {
     const info = await Auth.get("zerosync")
-    if (!info || info.type !== "oauth") return
-    if (info.access && info.expires > Date.now()) return info.access
+    if (info?.type === "oauth" && info.access && info.expires > Date.now()) return info.access
 
     const token = await login()
     await Auth.set("zerosync", {
