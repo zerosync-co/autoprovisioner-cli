@@ -39,7 +39,7 @@ export default defineConfig({
           tag: "link",
           attrs: {
             rel: "icon",
-            href: "/favicon.svg",
+            href: "/favicon.png",
           },
         },
       ],
