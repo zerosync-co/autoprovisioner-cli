@@ -155,16 +155,16 @@ func LoadFromConfig(config *opencode.Config) CommandRegistry {
 			Keybindings: parseBindings("<leader>h"),
 			// Trigger:     []string{"help"},
 		},
-		{
-			Name:        SwitchModeCommand,
-			Description: "next mode",
-			Keybindings: parseBindings("tab"),
-		},
-		{
-			Name:        SwitchModeReverseCommand,
-			Description: "previous mode",
-			Keybindings: parseBindings("shift+tab"),
-		},
+		// {
+		// 	Name:        SwitchModeCommand,
+		// 	Description: "next mode",
+		// 	Keybindings: parseBindings("tab"),
+		// },
+		// {
+		// 	Name:        SwitchModeReverseCommand,
+		// 	Description: "previous mode",
+		// 	Keybindings: parseBindings("shift+tab"),
+		// },
 		{
 			Name:        EditorOpenCommand,
 			Description: "open editor",

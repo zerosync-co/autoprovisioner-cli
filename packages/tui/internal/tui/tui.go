@@ -582,21 +582,12 @@ func (a appModel) openFile(filepath string) (tea.Model, tea.Cmd) {
 func (a appModel) home() string {
 	t := theme.CurrentTheme()
 	effectiveWidth := a.width - 4
-	baseStyle := styles.NewStyle().Background(t.Background())
+	baseStyle := styles.NewStyle().Background(t.Background()).Bold(true)
 	base := baseStyle.Render
-	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
-
-	auto := `
- ▄▀█ █░█ ▀█▀ █▀█
- █▀█ █▄█ ░█░ █▄█`
-	provisioner := `
- █▀█ █▀█ █▀█ █░█ █ █▀ █ █▀█ █▄░█ █▀▀ █▀█
- █▀▀ █▀▄ █▄█ ▀▄▀ █ ▄█ █ █▄█ █░▀█ ██▄ █▀▄`
 
 	logo := lipgloss.JoinVertical(
 		lipgloss.Center,
-		muted(auto),
-		base(provisioner),
+		base("AutoProvisioner"),
 	)
 	// cwd := app.Info.Path.Cwd
 	// config := app.Info.Path.Config
