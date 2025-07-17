@@ -2,7 +2,7 @@
 
 AI devops agent, built for the terminal.
 
-[Docs](https://docs.autoprovisioner.ai)
+[Docs](https://autoprovisioner.ai)
 
 
 ## Installation
