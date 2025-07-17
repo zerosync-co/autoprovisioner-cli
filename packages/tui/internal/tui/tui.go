@@ -586,19 +586,17 @@ func (a appModel) home() string {
 	base := baseStyle.Render
 	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
 
-	open := `
-█▀▀█ █▀▀█ █▀▀ █▀▀▄ 
-█░░█ █░░█ █▀▀ █░░█ 
-▀▀▀▀ █▀▀▀ ▀▀▀ ▀  ▀ `
-	code := `
-█▀▀ █▀▀█ █▀▀▄ █▀▀
-█░░ █░░█ █░░█ █▀▀
-▀▀▀ ▀▀▀▀ ▀▀▀  ▀▀▀`
+	auto := `
+ ▄▀█ █░█ ▀█▀ █▀█
+ █▀█ █▄█ ░█░ █▄█`
+	provisioner := `
+ █▀█ █▀█ █▀█ █░█ █ █▀ █ █▀█ █▄░█ █▀▀ █▀█
+ █▀▀ █▀▄ █▄█ ▀▄▀ █ ▄█ █ █▄█ █░▀█ ██▄ █▀▄`
 
-	logo := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		muted(open),
-		base(code),
+	logo := lipgloss.JoinVertical(
+		lipgloss.Center,
+		muted(auto),
+		base(provisioner),
 	)
 	// cwd := app.Info.Path.Cwd
 	// config := app.Info.Path.Config
