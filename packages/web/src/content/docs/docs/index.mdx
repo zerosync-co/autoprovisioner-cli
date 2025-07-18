@@ -15,6 +15,37 @@ import { Tabs, TabItem } from "@astrojs/starlight/components"
 
 ## Install
 
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install -g autoprovisioner-ai
+    ```
+  </TabItem>
+  <TabItem label="Bun">
+    ```bash
+    bun install -g autoprovisioner-ai
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm install -g autoprovisioner-ai
+    ```
+  </TabItem>
+  <TabItem label="Yarn">
+    ```bash
+    yarn global add autoprovisioner-ai
+    ```
+  </TabItem>
+</Tabs>
+
+You can also install the autoprovisioner binary through the following.
+
+##### Using the install script
+
 ```bash
 curl -fsSL https://cli.autoprovisioner.ai/install | bash
 ```
+
+##### Windows
+
+Right now the automatic installation methods do not work properly on Windows. However you can grab the binary from the [Releases](https://github.com/zerosync-co/autoprovisioner-cli/releases).
