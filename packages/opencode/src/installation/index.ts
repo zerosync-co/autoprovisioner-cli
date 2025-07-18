@@ -74,7 +74,7 @@ export namespace Installation {
       },
       {
         name: "brew" as const,
-        command: () => $`brew list --formula opencode-ai`.throws(false).text(),
+        command: () => $`brew list --formula autoprovisioner-ai`.throws(false).text(),
       },
     ]
 
@@ -88,7 +88,7 @@ export namespace Installation {
 
     for (const check of checks) {
       const output = await check.command()
-      if (output.includes("opencode-ai")) {
+      if (output.includes("autoprovisioner-ai")) {
         return check.name
       }
     }
@@ -112,13 +112,13 @@ export namespace Installation {
             VERSION: target,
           })
         case "npm":
-          return $`npm install -g opencode-ai@${target}`
+          return $`npm install -g autoprovisioner-ai@${target}`
         case "pnpm":
-          return $`pnpm install -g opencode-ai@${target}`
+          return $`pnpm install -g autoprovisioner-ai@${target}`
         case "bun":
-          return $`bun install -g opencode-ai@${target}`
+          return $`bun install -g autoprovisioner-ai@${target}`
         // case "brew":
-        //   return $`brew install sst/tap/opencode`.env({
+        //   return $`brew install sst/tap/autoprovisioner`.env({
         //     HOMEBREW_NO_AUTO_UPDATE: "1",
         //   })
         default:
