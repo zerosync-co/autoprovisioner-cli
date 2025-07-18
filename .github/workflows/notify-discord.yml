@@ -1,8 +1,9 @@
 name: discord
 
 on:
-  release:
-    types: [published]   # fires only when a release is published
+  # release:
+  #   types: [published]   # fires only when a release is published
+  workflow_dispatch:
 
 jobs:
   notify:
