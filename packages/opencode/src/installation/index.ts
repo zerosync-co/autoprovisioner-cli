@@ -107,18 +107,16 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
-          return $`curl -fsSL https://raw.githubusercontent.com/zerosync-co/autoprovisioner-cli/refs/heads/dev/install | bash`.env(
-            {
-              ...process.env,
-              VERSION: target,
-            },
-          )
-        // case "npm":
-        //   return $`npm install -g opencode-ai@${target}`
-        // case "pnpm":
-        //   return $`pnpm install -g opencode-ai@${target}`
-        // case "bun":
-        //   return $`bun install -g opencode-ai@${target}`
+          return $`curl -fsSL https://cli.autoprovisioner.ai/install | bash`.env({
+            ...process.env,
+            VERSION: target,
+          })
+        case "npm":
+          return $`npm install -g opencode-ai@${target}`
+        case "pnpm":
+          return $`pnpm install -g opencode-ai@${target}`
+        case "bun":
+          return $`bun install -g opencode-ai@${target}`
         // case "brew":
         //   return $`brew install sst/tap/opencode`.env({
         //     HOMEBREW_NO_AUTO_UPDATE: "1",

@@ -41,7 +41,7 @@ const targets = [
 await $`rm -rf dist`
 
 const optionalDependencies: Record<string, string> = {}
-// const npmTag = snapshot ? "snapshot" : "latest"
+const npmTag = snapshot ? "snapshot" : "latest"
 for (const [os, arch] of targets) {
   console.log(`building ${os}-${arch}`)
   const name = `${pkg.name}-${os}-${arch}`
@@ -63,7 +63,7 @@ for (const [os, arch] of targets) {
       2,
     ),
   )
-  // if (!dry) await $`cd dist/${name} && bun publish --access public --tag ${npmTag}`
+  if (!dry) await $`cd dist/${name} && bun publish --access public --tag ${npmTag}`
   optionalDependencies[name] = version
 }
 
@@ -87,7 +87,7 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
     2,
   ),
 )
-// if (!dry) await $`cd ./dist/${pkg.name} && bun publish --access public --tag ${npmTag}`
+if (!dry) await $`cd ./dist/${pkg.name} && bun publish --access public --tag ${npmTag}`
 
 if (!snapshot) {
   // Github Release
