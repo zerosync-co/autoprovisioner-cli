@@ -47,7 +47,10 @@ async function login() {
       fetch: (req) => {
         async function finish(token: string | null, error?: Error) {
           clearTimeout(loginTimeoutHandle)
-          await server.stop(true)
+
+          setTimeout(async () => {
+            await server.stop(true)
+          }, 100)
 
           if (error) {
             reject(error)
@@ -68,8 +71,11 @@ async function login() {
           return new Response("failed to resolve token", { status: 400 })
         }
 
+        const response = new Response()
+
         finish(token as string)
-        return new Response("OK")
+
+        return response
       },
     })
   })
