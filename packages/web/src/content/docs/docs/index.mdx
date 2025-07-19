@@ -42,10 +42,16 @@ You can also install the autoprovisioner binary through the following.
 
 ##### Using the install script
 
+Linux & macOS
+
 ```bash
 curl -fsSL https://cli.autoprovisioner.ai/install | bash
 ```
 
-##### Windows
+Windows
 
-Right now the automatic installation methods do not work properly on Windows. However you can grab the binary from the [Releases](https://github.com/zerosync-co/autoprovisioner-cli/releases).
+```powershell
+powershell -c "irm https://cli.autoprovisioner.ai/install.ps1 | iex"
+```
+
+- **Note for Windows users**: Num Lock must be turned off for the TUI to work properly.
