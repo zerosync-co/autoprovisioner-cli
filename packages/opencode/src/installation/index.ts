@@ -52,7 +52,6 @@ export namespace Installation {
   }
 
   export async function method() {
-    if (process.execPath.includes(path.join(".autoprovisioner", "bin"))) return "curl"
     const exec = process.execPath.toLowerCase()
 
     const checks = [
@@ -93,6 +92,9 @@ export namespace Installation {
       }
     }
 
+    // Only fall back to curl/script installation if no package manager installation found
+    if (process.execPath.includes(path.join(".autoprovisioner", "bin"))) return "curl"
+
     return "unknown"
   }
 
@@ -108,10 +110,7 @@ export namespace Installation {
       switch (method) {
         case "curl":
           if (process.platform === "win32") {
-            return $`powershell -c "irm https://cli.autoprovisioner.ai/install.ps1 | iex"`.env({
-              ...process.env,
-              VERSION: target,
-            })
+            return $`powershell -c "irm https://cli.autoprovisioner.ai/install.ps1 | iex -ArgumentList '${target}'"`
           }
           return $`curl -fsSL https://cli.autoprovisioner.ai/install | bash`.env({
             ...process.env,
