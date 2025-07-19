@@ -400,7 +400,6 @@ func (m *messagesComponent) renderHeader() string {
 	}
 
 	t := theme.CurrentTheme()
-	base := styles.NewStyle().Foreground(t.Text()).Background(t.Background()).Render
 	muted := styles.NewStyle().Foreground(t.TextMuted()).Background(t.Background()).Render
 	headerLines := []string{}
 	headerLines = append(
@@ -412,7 +411,8 @@ func (m *messagesComponent) renderHeader() string {
 	if m.app.Session.Share.URL != "" {
 		share = muted(m.app.Session.Share.URL + "  /unshare")
 	} else {
-		share = base("/share") + muted(" to create a shareable link")
+		// share = base("/share") + muted(" to create a shareable link")
+		share = ""
 	}
 
 	sessionInfo := ""
