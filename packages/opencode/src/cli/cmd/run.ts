@@ -26,7 +26,7 @@ const TOOL: Record<string, [string, string]> = {
 
 export const RunCommand = cmd({
   command: "run [message..]",
-  describe: "run opencode with a message",
+  describe: "run autoprovisioner with a message",
   builder: (yargs: Argv) => {
     return yargs
       .positional("message", {
@@ -49,15 +49,15 @@ export const RunCommand = cmd({
         type: "boolean",
         describe: "share the session",
       })
-      .option("model", {
-        type: "string",
-        alias: ["m"],
-        describe: "model to use in the format of provider/model",
-      })
-      .option("mode", {
-        type: "string",
-        describe: "mode to use",
-      })
+    // .option("model", {
+    //   type: "string",
+    //   alias: ["m"],
+    //   describe: "model to use in the format of provider/model",
+    // })
+    // .option("mode", {
+    //   type: "string",
+    //   describe: "mode to use",
+    // })
   },
   handler: async (args) => {
     let message = args.message.join(" ")
@@ -103,7 +103,7 @@ export const RunCommand = cmd({
       }
       UI.empty()
 
-      const { providerID, modelID } = args.model ? Provider.parseModel(args.model) : await Provider.defaultModel()
+      const { providerID, modelID } = /* args.model ? Provider.parseModel(args.model) : */ await Provider.defaultModel()
       UI.println(UI.Style.TEXT_NORMAL_BOLD + "@ ", UI.Style.TEXT_NORMAL + `${providerID}/${modelID}`)
       UI.empty()
 
@@ -156,7 +156,7 @@ export const RunCommand = cmd({
         UI.error(err)
       })
 
-      const mode = args.mode ? await Mode.get(args.mode) : await Mode.list().then((x) => x[0])
+      const mode = /* args.mode ? await Mode.get(args.mode) : */ await Mode.list().then((x) => x[0])
 
       const messageID = Identifier.ascending("message")
       const result = await Session.chat({

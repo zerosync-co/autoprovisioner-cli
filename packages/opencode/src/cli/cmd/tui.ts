@@ -15,27 +15,27 @@ import { Mode } from "../../session/mode"
 
 export const TuiCommand = cmd({
   command: "$0 [project]",
-  describe: "start opencode tui",
+  describe: "start autoprovisioner tui",
   builder: (yargs) =>
     yargs
       .positional("project", {
         type: "string",
-        describe: "path to start opencode in",
+        describe: "path to start autoprovisioner in",
       })
-      .option("model", {
-        type: "string",
-        alias: ["m"],
-        describe: "model to use in the format of provider/model",
-      })
+      // .option("model", {
+      //   type: "string",
+      //   alias: ["m"],
+      //   describe: "model to use in the format of provider/model",
+      // })
       .option("prompt", {
         alias: ["p"],
         type: "string",
         describe: "prompt to use",
-      })
-      .option("mode", {
-        type: "string",
-        describe: "mode to use",
       }),
+  // .option("mode", {
+  //   type: "string",
+  //   describe: "mode to use",
+  // }),
   handler: async (args) => {
     while (true) {
       const cwd = args.project ? path.resolve(args.project) : process.cwd()
@@ -80,9 +80,9 @@ export const TuiCommand = cmd({
         const proc = Bun.spawn({
           cmd: [
             ...cmd,
-            ...(args.model ? ["--model", args.model] : []),
+            // ...(args.model ? ["--model", args.model] : []),
             ...(args.prompt ? ["--prompt", args.prompt] : []),
-            ...(args.mode ? ["--mode", args.mode] : []),
+            // ...(args.mode ? ["--mode", args.mode] : []),
           ],
           cwd,
           stdout: "inherit",

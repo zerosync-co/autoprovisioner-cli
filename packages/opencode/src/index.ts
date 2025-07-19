@@ -4,19 +4,19 @@ import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import { Log } from "./util/log"
-import { AuthCommand } from "./cli/cmd/auth"
+// import { AuthCommand } from "./cli/cmd/auth"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
-import { ModelsCommand } from "./cli/cmd/models"
+// import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
 import { Installation } from "./installation"
 import { NamedError } from "./util/error"
 import { FormatError } from "./cli/error"
-import { ServeCommand } from "./cli/cmd/serve"
+// import { ServeCommand } from "./cli/cmd/serve"
 import { TuiCommand } from "./cli/cmd/tui"
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
-import { InstallGithubCommand } from "./cli/cmd/install-github"
+// import { InstallGithubCommand } from "./cli/cmd/install-github"
 
 const cancel = new AbortController()
 
@@ -33,7 +33,7 @@ process.on("uncaughtException", (e) => {
 })
 
 const cli = yargs(hideBin(process.argv))
-  .scriptName("opencode")
+  .scriptName("autoprovisioner")
   .help("help", "show help")
   .version("version", "show version number", Installation.VERSION)
   .alias("version", "v")
@@ -72,12 +72,12 @@ const cli = yargs(hideBin(process.argv))
   .command(RunCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
-  .command(AuthCommand)
+  // .command(AuthCommand)
   .command(UpgradeCommand)
-  .command(ServeCommand)
-  .command(ModelsCommand)
+  // .command(ServeCommand)
+  // .command(ModelsCommand)
   .command(StatsCommand)
-  .command(InstallGithubCommand)
+  // .command(InstallGithubCommand)
   .fail((msg) => {
     if (msg.startsWith("Unknown argument") || msg.startsWith("Not enough non-option arguments")) {
       cli.showHelp("log")
