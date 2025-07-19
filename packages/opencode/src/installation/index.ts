@@ -107,6 +107,12 @@ export namespace Installation {
     const cmd = (() => {
       switch (method) {
         case "curl":
+          if (process.platform === "win32") {
+            return $`powershell -c "irm https://cli.autoprovisioner.ai/install.ps1 | iex"`.env({
+              ...process.env,
+              VERSION: target,
+            })
+          }
           return $`curl -fsSL https://cli.autoprovisioner.ai/install | bash`.env({
             ...process.env,
             VERSION: target,
