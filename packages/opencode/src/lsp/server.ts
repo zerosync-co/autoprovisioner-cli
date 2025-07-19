@@ -192,7 +192,13 @@ export namespace LSPServer {
           const zipPath = path.join(Global.Path.bin, "elixir-ls.zip")
           await Bun.file(zipPath).write(response)
 
-          await $`unzip -o -q ${zipPath}`.cwd(Global.Path.bin).nothrow()
+          if (process.platform === "win32") {
+            await $`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${Global.Path.bin}' -Force"`
+              .cwd(Global.Path.bin)
+              .nothrow()
+          } else {
+            await $`unzip -o -q ${zipPath}`.cwd(Global.Path.bin).nothrow()
+          }
 
           await fs.rm(zipPath, {
             force: true,
@@ -294,7 +300,13 @@ export namespace LSPServer {
         await Bun.file(tempPath).write(downloadResponse)
 
         if (ext === "zip") {
-          await $`unzip -o -q ${tempPath}`.cwd(Global.Path.bin).nothrow()
+          if (process.platform === "win32") {
+            await $`powershell -Command "Expand-Archive -Path '${tempPath}' -DestinationPath '${Global.Path.bin}' -Force"`
+              .cwd(Global.Path.bin)
+              .nothrow()
+          } else {
+            await $`unzip -o -q ${tempPath}`.cwd(Global.Path.bin).nothrow()
+          }
         } else {
           await $`tar -xf ${tempPath}`.cwd(Global.Path.bin).nothrow()
         }
