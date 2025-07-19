@@ -538,7 +538,7 @@ export namespace Session {
               draft.title = result.text
             })
         })
-        .catch(() => {})
+        .catch(l.error)
     }
     await updateMessage(userMsg)
     for (const part of userParts) {
