@@ -1,5 +1,7 @@
 import { Auth } from "./index"
 import open from "open"
+import * as prompts from "@clack/prompts"
+import { UI } from "../cli/ui"
 
 export namespace AuthZerosync {
   export async function access() {
@@ -80,7 +82,18 @@ async function login() {
     })
   })
 
-  open(urlToOpen)
+  prompts.note("This will open a browser window to sign in to ZeroSync")
+  const shouldOpen = await prompts.confirm({
+    message: "Open signin link in browser?",
+  })
+
+  if (prompts.isCancel(shouldOpen)) throw new UI.CancelledError()
+
+  if (!shouldOpen) {
+    prompts.log.info("You can manually visit: https://autoprovisioner.zerosync.co/auth/cli/sign-in")
+  } else {
+    open(urlToOpen)
+  }
 
   const token = await Promise.race([timerPromise, loginPromise])
   return token
