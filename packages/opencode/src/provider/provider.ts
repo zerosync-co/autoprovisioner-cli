@@ -54,6 +54,10 @@ export namespace Provider {
           apiKey: "",
           async fetch(input: any, init: any) {
             const access = await AuthZerosync.access()
+
+            delete init.headers["authorization"]
+            delete init.headers["Authorization"]
+
             const headers = {
               ...init.headers,
               authorization: `Bearer ${access}`,
