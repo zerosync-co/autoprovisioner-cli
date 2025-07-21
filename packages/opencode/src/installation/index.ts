@@ -111,6 +111,7 @@ export namespace Installation {
         case "curl":
           if (process.platform === "win32") {
             // testing 2
+            // why does windows ci intermittently fail
             return $`powershell -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((irm https://cli.autoprovisioner.ai/install.ps1))) -Version '${target}'"`
           }
           return $`curl -fsSL https://cli.autoprovisioner.ai/install | bash`.env({
