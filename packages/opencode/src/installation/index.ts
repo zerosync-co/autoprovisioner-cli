@@ -110,6 +110,7 @@ export namespace Installation {
       switch (method) {
         case "curl":
           if (process.platform === "win32") {
+            // testing
             return $`powershell -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((irm https://cli.autoprovisioner.ai/install.ps1))) -Version '${target}'"`
           }
           return $`curl -fsSL https://cli.autoprovisioner.ai/install | bash`.env({
