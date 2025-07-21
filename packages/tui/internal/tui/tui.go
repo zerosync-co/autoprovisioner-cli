@@ -25,7 +25,6 @@ import (
 	"github.com/sst/opencode/internal/components/modal"
 	"github.com/sst/opencode/internal/components/status"
 	"github.com/sst/opencode/internal/components/toast"
-	"github.com/sst/opencode/internal/config"
 	"github.com/sst/opencode/internal/layout"
 	"github.com/sst/opencode/internal/styles"
 	"github.com/sst/opencode/internal/theme"
@@ -103,17 +102,15 @@ func (a appModel) Init() tea.Cmd {
 }
 
 func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	measure := util.Measure("app.Update")
+	defer measure("from", fmt.Sprintf("%T", msg))
+
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		keyString := msg.String()
-
-		// Handle Ctrl+Z for suspend
-		if keyString == "ctrl+z" {
-			return a, tea.Suspend
-		}
 
 		// 1. Handle active modal
 		if a.modal != nil {
@@ -277,6 +274,11 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, util.CmdHandler(commands.ExecuteCommandsMsg(matches))
 		}
 
+		// Fallback: suspend if ctrl+z is pressed and no user keybind matched
+		if keyString == "ctrl+z" {
+			return a, tea.Suspend
+		}
+
 		// 10. Fallback to editor. This is for other characters like backspace, tab, etc.
 		updatedEditor, cmd := a.editor.Update(msg)
 		a.editor = updatedEditor.(chat.EditorComponent)
@@ -328,13 +330,13 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case error:
 		return a, toast.NewErrorToast(msg.Error())
-	case app.SendMsg:
+	case app.SendPrompt:
 		a.showCompletionDialog = false
-		a.app, cmd = a.app.SendChatMessage(context.Background(), msg.Text, msg.Attachments)
+		a.app, cmd = a.app.SendPrompt(context.Background(), msg)
 		cmds = append(cmds, cmd)
 	case app.SetEditorContentMsg:
 		// Set the editor content without sending
-		a.editor.SetValue(msg.Text)
+		a.editor.SetValueWithAttachments(msg.Text)
 		updated, cmd := a.editor.Focus()
 		a.editor = updated.(chat.EditorComponent)
 		cmds = append(cmds, cmd)
@@ -439,7 +441,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		msg.Height -= 2 // Make space for the status bar
 		a.width, a.height = msg.Width, msg.Height
-		container := min(a.width, app.MAX_CONTAINER_WIDTH)
+		container := min(a.width, 86)
 		layout.Current = &layout.LayoutInfo{
 			Viewport: layout.Dimensions{
 				Width:  a.width,
@@ -464,15 +466,15 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case app.ModelSelectedMsg:
 		a.app.Provider = &msg.Provider
 		a.app.Model = &msg.Model
-		a.app.State.ModeModel[a.app.Mode.Name] = config.ModeModel{
+		a.app.State.ModeModel[a.app.Mode.Name] = app.ModeModel{
 			ProviderID: msg.Provider.ID,
 			ModelID:    msg.Model.ID,
 		}
 		a.app.State.UpdateModelUsage(msg.Provider.ID, msg.Model.ID)
-		a.app.SaveState()
+		cmds = append(cmds, a.app.SaveState())
 	case dialog.ThemeSelectedMsg:
 		a.app.State.Theme = msg.ThemeName
-		a.app.SaveState()
+		cmds = append(cmds, a.app.SaveState())
 	case toast.ShowToastMsg:
 		tm, cmd := a.toastManager.Update(msg)
 		a.toastManager = tm
@@ -525,6 +527,8 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a appModel) View() string {
+	measure := util.Measure("app.View")
+	defer measure()
 	t := theme.CurrentTheme()
 
 	var mainLayout string
@@ -580,6 +584,8 @@ func (a appModel) openFile(filepath string) (tea.Model, tea.Cmd) {
 }
 
 func (a appModel) home() string {
+	measure := util.Measure("home.View")
+	defer measure()
 	t := theme.CurrentTheme()
 	effectiveWidth := a.width - 4
 	baseStyle := styles.NewStyle().Background(t.Background()).Bold(true)
@@ -680,6 +686,8 @@ func (a appModel) home() string {
 }
 
 func (a appModel) chat() string {
+	measure := util.Measure("chat.View")
+	defer measure()
 	effectiveWidth := a.width - 4
 	t := theme.CurrentTheme()
 	editorView := a.editor.View()
@@ -764,7 +772,8 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 			return a, toast.NewErrorToast("Something went wrong, couldn't open editor")
 		}
 		tmpfile.Close()
-		c := exec.Command(editor, tmpfile.Name()) //nolint:gosec
+		parts := strings.Fields(editor)
+		c := exec.Command(parts[0], append(parts[1:], tmpfile.Name())...) //nolint:gosec
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
@@ -808,7 +817,7 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 			return a, toast.NewErrorToast("Failed to share session")
 		}
 		shareUrl := response.Share.URL
-		cmds = append(cmds, a.app.SetClipboard(shareUrl))
+		cmds = append(cmds, app.SetClipboard(shareUrl))
 		cmds = append(cmds, toast.NewSuccessToast("Share URL copied to clipboard!"))
 	case commands.SessionUnshareCommand:
 		if a.app.Session.ID == "" {
@@ -870,7 +879,8 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 		tmpfile.Close()
 
 		// Open in editor
-		c := exec.Command(editor, tmpfile.Name())
+		parts := strings.Fields(editor)
+		c := exec.Command(parts[0], append(parts[1:], tmpfile.Name())...) //nolint:gosec
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
@@ -906,9 +916,9 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 		cmds = append(cmds, cmd)
 	case commands.FileDiffToggleCommand:
 		a.fileViewer, cmd = a.fileViewer.ToggleDiff()
-		a.app.State.SplitDiff = a.fileViewer.DiffStyle() == fileviewer.DiffStyleSplit
-		a.app.SaveState()
 		cmds = append(cmds, cmd)
+		a.app.State.SplitDiff = a.fileViewer.DiffStyle() == fileviewer.DiffStyleSplit
+		cmds = append(cmds, a.app.SaveState())
 	case commands.FileSearchCommand:
 		return a, nil
 	case commands.ProjectInitCommand:
@@ -979,7 +989,7 @@ func (a appModel) executeCommand(command commands.Command) (tea.Model, tea.Cmd) 
 	case commands.MessagesLayoutToggleCommand:
 		a.messagesRight = !a.messagesRight
 		a.app.State.MessagesRight = a.messagesRight
-		a.app.SaveState()
+		cmds = append(cmds, a.app.SaveState())
 	case commands.MessagesCopyCommand:
 		updated, cmd := a.messages.CopyLastMessage()
 		a.messages = updated.(chat.MessagesComponent)

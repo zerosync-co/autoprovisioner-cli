@@ -41,11 +41,13 @@ export const TaskTool = Tool.define({
       sessionID: session.id,
       modelID: msg.modelID,
       providerID: msg.providerID,
+      tools: {
+        todoread: false,
+        todowrite: false,
+      },
       parts: [
         {
           id: Identifier.ascending("part"),
-          messageID,
-          sessionID: session.id,
           type: "text",
           text: params.prompt,
         },

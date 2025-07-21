@@ -110,7 +110,7 @@ export const AuthLoginCommand = cmd({
     if (provider === "other") {
       provider = await prompts.text({
         message: "Enter provider id",
-        validate: (x) => (x.match(/^[a-z-]+$/) ? undefined : "a-z and hyphens only"),
+        validate: (x) => (x.match(/^[0-9a-z-]+$/) ? undefined : "a-z, 0-9 and hyphens only"),
       })
       if (prompts.isCancel(provider)) throw new UI.CancelledError()
       provider = provider.replace(/^@ai-sdk\//, "")
@@ -122,7 +122,7 @@ export const AuthLoginCommand = cmd({
 
     if (provider === "amazon-bedrock") {
       prompts.log.info(
-        "Amazon bedrock can be configured with standard AWS environment variables like AWS_PROFILE or AWS_ACCESS_KEY_ID",
+        "Amazon bedrock can be configured with standard AWS environment variables like AWS_BEARER_TOKEN_BEDROCK, AWS_PROFILE or AWS_ACCESS_KEY_ID",
       )
       prompts.outro("Done")
       return
@@ -275,6 +275,10 @@ export const AuthLoginCommand = cmd({
 
       prompts.outro("Done")
       return
+    }
+
+    if (provider === "vercel") {
+      prompts.log.info("You can create an api key in the dashboard")
     }
 
     const key = await prompts.password({

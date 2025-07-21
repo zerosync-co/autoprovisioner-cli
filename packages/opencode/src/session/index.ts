@@ -319,14 +319,40 @@ export namespace Session {
     return part
   }
 
-  export async function chat(input: {
-    sessionID: string
-    messageID: string
-    providerID: string
-    modelID: string
-    mode?: string
-    parts: (MessageV2.TextPart | MessageV2.FilePart)[]
-  }) {
+  export const ChatInput = z.object({
+    sessionID: Identifier.schema("session"),
+    messageID: Identifier.schema("message").optional(),
+    providerID: z.string(),
+    modelID: z.string(),
+    mode: z.string().optional(),
+    tools: z.record(z.boolean()).optional(),
+    parts: z.array(
+      z.discriminatedUnion("type", [
+        MessageV2.TextPart.omit({
+          messageID: true,
+          sessionID: true,
+        })
+          .partial({
+            id: true,
+          })
+          .openapi({
+            ref: "TextPartInput",
+          }),
+        MessageV2.FilePart.omit({
+          messageID: true,
+          sessionID: true,
+        })
+          .partial({
+            id: true,
+          })
+          .openapi({
+            ref: "FilePartInput",
+          }),
+      ]),
+    ),
+  })
+
+  export async function chat(input: z.infer<typeof ChatInput>) {
     const l = log.clone().tag("session", input.sessionID)
     l.info("chatting")
 
@@ -384,7 +410,7 @@ export namespace Session {
     if (lastSummary) msgs = msgs.filter((msg) => msg.info.id >= lastSummary.info.id)
 
     const userMsg: MessageV2.Info = {
-      id: input.messageID,
+      id: input.messageID ?? Identifier.ascending("message"),
       role: "user",
       sessionID: input.sessionID,
       time: {
@@ -464,6 +490,12 @@ export namespace Session {
                     synthetic: true,
                     text: result.output,
                   },
+                  {
+                    ...part,
+                    id: part.id ?? Identifier.ascending("part"),
+                    messageID: userMsg.id,
+                    sessionID: input.sessionID,
+                  },
                 ]
               }
 
@@ -479,18 +511,26 @@ export namespace Session {
                   synthetic: true,
                 },
                 {
-                  id: Identifier.ascending("part"),
+                  id: part.id ?? Identifier.ascending("part"),
                   messageID: userMsg.id,
                   sessionID: input.sessionID,
                   type: "file",
                   url: `data:${part.mime};base64,` + Buffer.from(await file.bytes()).toString("base64"),
                   mime: part.mime,
                   filename: part.filename!,
+                  source: part.source,
                 },
               ]
           }
         }
-        return [part]
+        return [
+          {
+            id: Identifier.ascending("part"),
+            ...part,
+            messageID: userMsg.id,
+            sessionID: input.sessionID,
+          },
+        ]
       }),
     ).then((x) => x.flat())
 
@@ -507,8 +547,10 @@ export namespace Session {
     if (msgs.length === 0 && !session.parentID) {
       const small = (await Provider.getSmallModel(input.providerID)) ?? model
       generateText({
-        maxOutputTokens: input.providerID === "google" ? 1024 : 20,
-        providerOptions: small.info.options,
+        maxOutputTokens: small.info.reasoning ? 1024 : 20,
+        providerOptions: {
+          [input.providerID]: small.info.options,
+        },
         messages: [
           ...SystemPrompt.title(input.providerID).map(
             (x): ModelMessage => ({
@@ -584,6 +626,7 @@ export namespace Session {
 
     for (const item of await Provider.tools(input.providerID)) {
       if (mode.tools[item.id] === false) continue
+      if (input.tools?.[item.id] === false) continue
       if (session.parentID && item.id === "task") continue
       tools[item.id] = tool({
         id: item.id as any,
@@ -653,7 +696,9 @@ export namespace Session {
       maxOutputTokens: outputLimit,
       abortSignal: abort.signal,
       stopWhen: stepCountIs(1000),
-      providerOptions: model.info.options,
+      providerOptions: {
+        [input.providerID]: model.info.options,
+      },
       messages: [
         ...system.map(
           (x): ModelMessage => ({
@@ -1104,8 +1149,6 @@ export namespace Session {
       parts: [
         {
           id: Identifier.ascending("part"),
-          sessionID: input.sessionID,
-          messageID: input.messageID,
           type: "text",
           text: PROMPT_INITIALIZE.replace("${path}", app.path.root),
         },

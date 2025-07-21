@@ -82,7 +82,6 @@ resources:
       mcpLocalConfig: McpLocalConfig
       mcpRemoteConfig: McpRemoteConfig
       modeConfig: ModeConfig
-      layoutConfig: LayoutConfig
     methods:
       get: get /config
 
@@ -92,7 +91,13 @@ resources:
       message: Message
       part: Part
       textPart: TextPart
+      textPartInput: TextPartInput
       filePart: FilePart
+      filePartInput: FilePartInput
+      filePartSourceText: FilePartSourceText
+      filePartSource: FilePartSource
+      fileSource: FileSource
+      symbolSource: SymbolSource
       toolPart: ToolPart
       stepStartPart: StepStartPart
       stepFinishPart: StepFinishPart

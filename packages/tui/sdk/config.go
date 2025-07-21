@@ -55,8 +55,8 @@ type Config struct {
 	Instructions []string `json:"instructions"`
 	// Custom keybind configurations
 	Keybinds KeybindsConfig `json:"keybinds"`
-	// Layout to use for the TUI
-	Layout LayoutConfig `json:"layout"`
+	// @deprecated Always uses stretch layout.
+	Layout ConfigLayout `json:"layout"`
 	// Minimum log level to write to log files
 	LogLevel LogLevel `json:"log_level"`
 	// MCP (Model Context Protocol) server configurations
@@ -67,9 +67,12 @@ type Config struct {
 	Model string `json:"model"`
 	// Custom provider configurations and model overrides
 	Provider map[string]ConfigProvider `json:"provider"`
-	// Control sharing behavior: 'auto' enables automatic sharing, 'disabled' disables
-	// all sharing
+	// Control sharing behavior:'manual' allows manual sharing via commands, 'auto'
+	// enables automatic sharing, 'disabled' disables all sharing
 	Share ConfigShare `json:"share"`
+	// Small model to use for tasks like summarization and title generation in the
+	// format of provider/model
+	SmallModel string `json:"small_model"`
 	// Theme name to use for the interface
 	Theme string `json:"theme"`
 	// Custom username to display in conversations instead of system username
@@ -93,6 +96,7 @@ type configJSON struct {
 	Model             apijson.Field
 	Provider          apijson.Field
 	Share             apijson.Field
+	SmallModel        apijson.Field
 	Theme             apijson.Field
 	Username          apijson.Field
 	raw               string
@@ -197,6 +201,22 @@ func (r configExperimentalHookSessionCompletedJSON) RawJSON() string {
 	return r.raw
 }
 
+// @deprecated Always uses stretch layout.
+type ConfigLayout string
+
+const (
+	ConfigLayoutAuto    ConfigLayout = "auto"
+	ConfigLayoutStretch ConfigLayout = "stretch"
+)
+
+func (r ConfigLayout) IsKnown() bool {
+	switch r {
+	case ConfigLayoutAuto, ConfigLayoutStretch:
+		return true
+	}
+	return false
+}
+
 type ConfigMcp struct {
 	// Type of MCP server connection
 	Type ConfigMcpType `json:"type,required"`
@@ -206,6 +226,8 @@ type ConfigMcp struct {
 	Enabled bool `json:"enabled"`
 	// This field can have the runtime type of [map[string]string].
 	Environment interface{} `json:"environment"`
+	// This field can have the runtime type of [map[string]string].
+	Headers interface{} `json:"headers"`
 	// URL of the remote MCP server
 	URL   string        `json:"url"`
 	JSON  configMcpJSON `json:"-"`
@@ -218,6 +240,7 @@ type configMcpJSON struct {
 	Command     apijson.Field
 	Enabled     apijson.Field
 	Environment apijson.Field
+	Headers     apijson.Field
 	URL         apijson.Field
 	raw         string
 	ExtraFields map[string]apijson.Field
@@ -427,18 +450,19 @@ func (r configProviderModelsLimitJSON) RawJSON() string {
 	return r.raw
 }
 
-// Control sharing behavior: 'auto' enables automatic sharing, 'disabled' disables
-// all sharing
+// Control sharing behavior:'manual' allows manual sharing via commands, 'auto'
+// enables automatic sharing, 'disabled' disables all sharing
 type ConfigShare string
 
 const (
+	ConfigShareManual   ConfigShare = "manual"
 	ConfigShareAuto     ConfigShare = "auto"
 	ConfigShareDisabled ConfigShare = "disabled"
 )
 
 func (r ConfigShare) IsKnown() bool {
 	switch r {
-	case ConfigShareAuto, ConfigShareDisabled:
+	case ConfigShareManual, ConfigShareAuto, ConfigShareDisabled:
 		return true
 	}
 	return false
@@ -509,9 +533,9 @@ type KeybindsConfig struct {
 	SessionShare string `json:"session_share,required"`
 	// Unshare current session
 	SessionUnshare string `json:"session_unshare,required"`
-	// Switch mode
+	// Next mode
 	SwitchMode string `json:"switch_mode,required"`
-	// Switch mode reverse
+	// Previous Mode
 	SwitchModeReverse string `json:"switch_mode_reverse,required"`
 	// List available themes
 	ThemeList string `json:"theme_list,required"`
@@ -570,21 +594,6 @@ func (r keybindsConfigJSON) RawJSON() string {
 	return r.raw
 }
 
-type LayoutConfig string
-
-const (
-	LayoutConfigAuto    LayoutConfig = "auto"
-	LayoutConfigStretch LayoutConfig = "stretch"
-)
-
-func (r LayoutConfig) IsKnown() bool {
-	switch r {
-	case LayoutConfigAuto, LayoutConfigStretch:
-		return true
-	}
-	return false
-}
-
 type McpLocalConfig struct {
 	// Command and arguments to run the MCP server
 	Command []string `json:"command,required"`
@@ -638,7 +647,9 @@ type McpRemoteConfig struct {
 	// URL of the remote MCP server
 	URL string `json:"url,required"`
 	// Enable or disable the MCP server on startup
-	Enabled bool                `json:"enabled"`
+	Enabled bool `json:"enabled"`
+	// Headers to send with the request
+	Headers map[string]string   `json:"headers"`
 	JSON    mcpRemoteConfigJSON `json:"-"`
 }
 
@@ -647,6 +658,7 @@ type mcpRemoteConfigJSON struct {
 	Type        apijson.Field
 	URL         apijson.Field
 	Enabled     apijson.Field
+	Headers     apijson.Field
 	raw         string
 	ExtraFields map[string]apijson.Field
 }

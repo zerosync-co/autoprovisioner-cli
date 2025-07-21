@@ -68,6 +68,7 @@ export namespace Config {
       type: z.literal("remote").describe("Type of MCP server connection"),
       url: z.string().describe("URL of the remote MCP server"),
       enabled: z.boolean().optional().describe("Enable or disable the MCP server on startup"),
+      headers: z.record(z.string(), z.string()).optional().describe("Headers to send with the request"),
     })
     .strict()
     .openapi({
@@ -159,6 +160,12 @@ export namespace Config {
       autoupdate: z.boolean().optional().describe("Automatically update to the latest version"),
       disabled_providers: z.array(z.string()).optional().describe("Disable providers that are loaded automatically"),
       model: z.string().describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      small_model: z
+        .string()
+        .describe(
+          "Small model to use for tasks like summarization and title generation in the format of provider/model",
+        )
+        .optional(),
       username: z
         .string()
         .optional()
@@ -171,7 +178,6 @@ export namespace Config {
         .catchall(Mode)
         .optional()
         .describe("Modes configuration, see https://opencode.ai/docs/modes"),
-      log_level: Log.Level.optional().describe("Minimum log level to write to log files"),
       provider: z
         .record(
           ModelsDev.Provider.partial().extend({
@@ -183,7 +189,7 @@ export namespace Config {
         .describe("Custom provider configurations and model overrides"),
       mcp: z.record(z.string(), Mcp).optional().describe("MCP (Model Context Protocol) server configurations"),
       instructions: z.array(z.string()).optional().describe("Additional instruction files or patterns to include"),
-      layout: Layout.optional().describe("Layout to use for the TUI"),
+      layout: Layout.optional().describe("@deprecated Always uses stretch layout."),
       experimental: z
         .object({
           hook: z
