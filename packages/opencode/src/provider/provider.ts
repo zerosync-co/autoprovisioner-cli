@@ -6,6 +6,7 @@ import { NoSuchModelError, type LanguageModel, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
 import { BunProc } from "../bun"
 import { BashTool } from "../tool/bash"
+import { CredentialBashTool } from "../tool/credential-bash"
 import { EditTool } from "../tool/edit"
 import { WebFetchTool } from "../tool/webfetch"
 import { GlobTool } from "../tool/glob"
@@ -504,6 +505,7 @@ export namespace Provider {
 
   const TOOLS = [
     BashTool,
+    CredentialBashTool,
     EditTool,
     WebFetchTool,
     GlobTool,
