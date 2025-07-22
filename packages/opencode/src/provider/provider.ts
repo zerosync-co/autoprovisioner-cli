@@ -24,6 +24,7 @@ import { ModelsDev } from "./models"
 import { NamedError } from "../util/error"
 import { Auth } from "../auth"
 import { TaskTool } from "../tool/task"
+import { ListCredentialsTool } from "../tool/list-credentials"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -506,6 +507,7 @@ export namespace Provider {
   const TOOLS = [
     BashTool,
     CredentialBashTool,
+    ListCredentialsTool,
     EditTool,
     WebFetchTool,
     GlobTool,
