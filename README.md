@@ -1,6 +1,6 @@
 # AutoProvisioner CLI
 
-AI devops agent, built for the terminal.
+AI DevOps agent, built for the terminal.
 
 [Docs](https://autoprovisioner.ai)
 
