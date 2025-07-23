@@ -376,7 +376,15 @@ func renderToolDetails(
 		case "bash":
 			command := toolInputMap["command"].(string)
 			body = fmt.Sprintf("```console\n$ %s\n", command)
-			stdout := metadata["stdout"]
+
+			// For streaming tools, use State.Output; for completed tools, use metadata["stdout"]
+			var stdout interface{}
+			if toolCall.State.Status == opencode.ToolPartStateStatusStreaming {
+				stdout = toolCall.State.Output
+			} else {
+				stdout = metadata["stdout"]
+			}
+
 			if stdout != nil {
 				body += ansi.Strip(fmt.Sprintf("%s", stdout))
 			}

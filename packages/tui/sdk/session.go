@@ -1556,13 +1556,13 @@ func (r *ToolPartState) UnmarshalJSON(data []byte) (err error) {
 // specific types for more type safety.
 //
 // Possible runtime types of the union are [ToolStatePending], [ToolStateRunning],
-// [ToolStateCompleted], [ToolStateError].
+// [ToolStateStreaming], [ToolStateCompleted], [ToolStateError].
 func (r ToolPartState) AsUnion() ToolPartStateUnion {
 	return r.union
 }
 
-// Union satisfied by [ToolStatePending], [ToolStateRunning], [ToolStateCompleted]
-// or [ToolStateError].
+// Union satisfied by [ToolStatePending], [ToolStateRunning], [ToolStateStreaming],
+// [ToolStateCompleted] or [ToolStateError].
 type ToolPartStateUnion interface {
 	implementsToolPartState()
 }
@@ -1583,6 +1583,11 @@ func init() {
 		},
 		apijson.UnionVariant{
 			TypeFilter:         gjson.JSON,
+			Type:               reflect.TypeOf(ToolStateStreaming{}),
+			DiscriminatorValue: "streaming",
+		},
+		apijson.UnionVariant{
+			TypeFilter:         gjson.JSON,
 			Type:               reflect.TypeOf(ToolStateCompleted{}),
 			DiscriminatorValue: "completed",
 		},
@@ -1599,13 +1604,14 @@ type ToolPartStateStatus string
 const (
 	ToolPartStateStatusPending   ToolPartStateStatus = "pending"
 	ToolPartStateStatusRunning   ToolPartStateStatus = "running"
+	ToolPartStateStatusStreaming ToolPartStateStatus = "streaming"
 	ToolPartStateStatusCompleted ToolPartStateStatus = "completed"
 	ToolPartStateStatusError     ToolPartStateStatus = "error"
 )
 
 func (r ToolPartStateStatus) IsKnown() bool {
 	switch r {
-	case ToolPartStateStatusPending, ToolPartStateStatusRunning, ToolPartStateStatusCompleted, ToolPartStateStatusError:
+	case ToolPartStateStatusPending, ToolPartStateStatusRunning, ToolPartStateStatusStreaming, ToolPartStateStatusCompleted, ToolPartStateStatusError:
 		return true
 	}
 	return false
@@ -1860,6 +1866,74 @@ func (r *ToolStateRunningTime) UnmarshalJSON(data []byte) (err error) {
 }
 
 func (r toolStateRunningTimeJSON) RawJSON() string {
+	return r.raw
+}
+
+type ToolStateStreaming struct {
+	Status   ToolStateStreamingStatus `json:"status,required"`
+	Time     ToolStateStreamingTime   `json:"time,required"`
+	Input    interface{}              `json:"input"`
+	Output   string                   `json:"output"`
+	Metadata map[string]interface{}   `json:"metadata"`
+	Title    string                   `json:"title"`
+	JSON     toolStateStreamingJSON   `json:"-"`
+}
+
+// toolStateStreamingJSON contains the JSON metadata for the struct
+// [ToolStateStreaming]
+type toolStateStreamingJSON struct {
+	Status      apijson.Field
+	Time        apijson.Field
+	Input       apijson.Field
+	Output      apijson.Field
+	Metadata    apijson.Field
+	Title       apijson.Field
+	raw         string
+	ExtraFields map[string]apijson.Field
+}
+
+func (r *ToolStateStreaming) UnmarshalJSON(data []byte) (err error) {
+	return apijson.UnmarshalRoot(data, r)
+}
+
+func (r toolStateStreamingJSON) RawJSON() string {
+	return r.raw
+}
+
+func (r ToolStateStreaming) implementsToolPartState() {}
+
+type ToolStateStreamingStatus string
+
+const (
+	ToolStateStreamingStatusStreaming ToolStateStreamingStatus = "streaming"
+)
+
+func (r ToolStateStreamingStatus) IsKnown() bool {
+	switch r {
+	case ToolStateStreamingStatusStreaming:
+		return true
+	}
+	return false
+}
+
+type ToolStateStreamingTime struct {
+	Start float64                    `json:"start,required"`
+	JSON  toolStateStreamingTimeJSON `json:"-"`
+}
+
+// toolStateStreamingTimeJSON contains the JSON metadata for the struct
+// [ToolStateStreamingTime]
+type toolStateStreamingTimeJSON struct {
+	Start       apijson.Field
+	raw         string
+	ExtraFields map[string]apijson.Field
+}
+
+func (r *ToolStateStreamingTime) UnmarshalJSON(data []byte) (err error) {
+	return apijson.UnmarshalRoot(data, r)
+}
+
+func (r toolStateStreamingTimeJSON) RawJSON() string {
 	return r.raw
 }
 

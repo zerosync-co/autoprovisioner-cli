@@ -4,12 +4,21 @@ export namespace Tool {
   interface Metadata {
     [key: string]: any
   }
+
+  export type StreamChunk = {
+    type: "stdout" | "stderr" | "progress"
+    data: string
+    timestamp: number
+  }
+
   export type Context<M extends Metadata = Metadata> = {
     sessionID: string
     messageID: string
     abort: AbortSignal
     metadata(input: { title?: string; metadata?: M }): void
+    stream?(chunk: StreamChunk): void
   }
+
   export interface Info<Parameters extends StandardSchemaV1 = StandardSchemaV1, M extends Metadata = Metadata> {
     id: string
     description: string

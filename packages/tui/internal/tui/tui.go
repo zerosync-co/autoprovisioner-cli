@@ -359,6 +359,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case opencode.EventListResponseEventMessagePartUpdated:
 		slog.Info("message part updated", "message", msg.Properties.Part.MessageID, "part", msg.Properties.Part.ID)
+
 		if msg.Properties.Part.SessionID == a.app.Session.ID {
 			messageIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
 				switch casted := m.Info.(type) {
@@ -387,12 +388,82 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return false
 				})
 				if partIndex > -1 {
-					message.Parts[partIndex] = msg.Properties.Part.AsUnion()
+					// Check if we have a streaming tool part that we should preserve
+					if existingPart, ok := message.Parts[partIndex].(opencode.ToolPart); ok {
+						if newPart, ok := msg.Properties.Part.AsUnion().(opencode.ToolPart); ok {
+							// If existing part is streaming and new part is the same tool call, preserve streaming output
+							if existingPart.State.Status == opencode.ToolPartStateStatusStreaming &&
+								existingPart.CallID == newPart.CallID {
+								// Keep the streaming output if it's longer (more up to date)
+								if len(existingPart.State.Output) > len(newPart.State.Output) {
+									newPart.State.Output = existingPart.State.Output
+									newPart.State.Status = opencode.ToolPartStateStatusStreaming
+								}
+							}
+							message.Parts[partIndex] = newPart
+						} else {
+							message.Parts[partIndex] = msg.Properties.Part.AsUnion()
+						}
+					} else {
+						message.Parts[partIndex] = msg.Properties.Part.AsUnion()
+					}
 				}
 				if partIndex == -1 {
 					message.Parts = append(message.Parts, msg.Properties.Part.AsUnion())
 				}
 				a.app.Messages[messageIndex] = message
+			}
+		}
+	case opencode.EventListResponseEventToolStream:
+		// Handle real-time tool stream events for live output updates
+		if msg.Properties.SessionID == a.app.Session.ID {
+			messageIndex := slices.IndexFunc(a.app.Messages, func(m app.Message) bool {
+				switch casted := m.Info.(type) {
+				case opencode.AssistantMessage:
+					return casted.ID == msg.Properties.MessageID
+				default:
+					return false
+				}
+			})
+			if messageIndex != -1 {
+				message := a.app.Messages[messageIndex]
+				partIndex := slices.IndexFunc(message.Parts, func(p opencode.PartUnion) bool {
+					switch casted := p.(type) {
+					case opencode.ToolPart:
+						return casted.CallID == msg.Properties.ToolCallID
+					default:
+						return false
+					}
+				})
+				if partIndex != -1 {
+					// Update the streaming tool output by accumulating the stream data
+					if toolPart, ok := message.Parts[partIndex].(opencode.ToolPart); ok {
+						// Only update if we're not in a final state (completed/error)
+						if toolPart.State.Status != opencode.ToolPartStateStatusCompleted && toolPart.State.Status != opencode.ToolPartStateStatusError {
+							// Create a new ToolPart with updated state to ensure re-rendering
+							newToolPart := opencode.ToolPart{
+								ID:        toolPart.ID,
+								CallID:    toolPart.CallID,
+								MessageID: toolPart.MessageID,
+								SessionID: toolPart.SessionID,
+								Tool:      toolPart.Tool,
+								Type:      toolPart.Type,
+								State: opencode.ToolPartState{
+									Status:   opencode.ToolPartStateStatusStreaming,
+									Input:    toolPart.State.Input,
+									Metadata: toolPart.State.Metadata,
+									Output:   toolPart.State.Output + msg.Properties.Data,
+									Time:     toolPart.State.Time,
+									Title:    toolPart.State.Title,
+									Error:    toolPart.State.Error,
+								},
+							}
+
+							message.Parts[partIndex] = newToolPart
+							a.app.Messages[messageIndex] = message
+						}
+					}
+				}
 			}
 		}
 	case opencode.EventListResponseEventMessageUpdated:

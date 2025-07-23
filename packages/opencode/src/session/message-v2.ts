@@ -59,6 +59,22 @@ export namespace MessageV2 {
     })
   export type ToolStateCompleted = z.infer<typeof ToolStateCompleted>
 
+  export const ToolStateStreaming = z
+    .object({
+      status: z.literal("streaming"),
+      input: z.any(),
+      output: z.string(),
+      title: z.string().optional(),
+      metadata: z.record(z.any()).optional(),
+      time: z.object({
+        start: z.number(),
+      }),
+    })
+    .openapi({
+      ref: "ToolStateStreaming",
+    })
+  export type ToolStateStreaming = z.infer<typeof ToolStateStreaming>
+
   export const ToolStateError = z
     .object({
       status: z.literal("error"),
@@ -75,7 +91,13 @@ export namespace MessageV2 {
   export type ToolStateError = z.infer<typeof ToolStateError>
 
   export const ToolState = z
-    .discriminatedUnion("status", [ToolStatePending, ToolStateRunning, ToolStateCompleted, ToolStateError])
+    .discriminatedUnion("status", [
+      ToolStatePending,
+      ToolStateRunning,
+      ToolStateStreaming,
+      ToolStateCompleted,
+      ToolStateError,
+    ])
     .openapi({
       ref: "ToolState",
     })
@@ -269,6 +291,17 @@ export namespace MessageV2 {
       "message.part.updated",
       z.object({
         part: Part,
+      }),
+    ),
+    ToolStream: Bus.event(
+      "tool.stream",
+      z.object({
+        sessionID: z.string(),
+        messageID: z.string(),
+        toolCallId: z.string(),
+        type: z.enum(["stdout", "stderr", "progress"]),
+        data: z.string(),
+        timestamp: z.number(),
       }),
     ),
   }

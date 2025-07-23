@@ -31,19 +31,71 @@ export const BashTool = Tool.define({
       stdout: "pipe",
       stderr: "pipe",
     })
+
+    let stdoutBuffer = ""
+    let stderrBuffer = ""
+
+    if (ctx.stream) {
+      const streamOutput = async () => {
+        const stdoutReader = process.stdout.getReader()
+        const stderrReader = process.stderr.getReader()
+        const decoder = new TextDecoder()
+
+        const readStream = async (reader: ReadableStreamDefaultReader<Uint8Array>, type: "stdout" | "stderr") => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              const text = decoder.decode(value, { stream: true })
+
+              if (type === "stdout") {
+                stdoutBuffer += text
+              } else {
+                stderrBuffer += text
+              }
+
+              if (text.trim() && typeof ctx.stream === "function") {
+                ctx.stream({
+                  type,
+                  data: text,
+                  timestamp: Date.now(),
+                })
+              }
+            }
+          } catch (error) {
+            if (!ctx.abort.aborted) {
+              throw error
+            }
+          } finally {
+            reader.releaseLock()
+          }
+        }
+
+        await Promise.all([readStream(stdoutReader, "stdout"), readStream(stderrReader, "stderr")])
+      }
+
+      streamOutput().catch(() => {
+        // Ignore streaming errors, we'll still get final output
+      })
+    }
+
     await process.exited
-    const stdout = await new Response(process.stdout).text()
-    const stderr = await new Response(process.stderr).text()
+
+    if (!ctx.stream) {
+      stdoutBuffer = await new Response(process.stdout).text()
+      stderrBuffer = await new Response(process.stderr).text()
+    }
 
     return {
       title: params.command,
       metadata: {
-        stderr,
-        stdout,
+        stderr: stderrBuffer,
+        stdout: stdoutBuffer,
         exit: process.exitCode,
         description: params.description,
       },
-      output: [`<stdout>`, stdout ?? "", `</stdout>`, `<stderr>`, stderr ?? "", `</stderr>`].join("\n"),
+      output: [`<stdout>`, stdoutBuffer ?? "", `</stdout>`, `<stderr>`, stderrBuffer ?? "", `</stderr>`].join("\n"),
     }
   },
 })

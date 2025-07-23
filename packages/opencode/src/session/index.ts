@@ -654,6 +654,34 @@ export namespace Session {
                 })
               }
             },
+            stream: (chunk) => {
+              Bus.publish(MessageV2.Event.ToolStream, {
+                sessionID: input.sessionID,
+                messageID: assistantMsg.id,
+                toolCallId: options.toolCallId,
+                type: chunk.type,
+                data: chunk.data,
+                timestamp: chunk.timestamp,
+              })
+
+              const match = processor.partFromToolCall(options.toolCallId)
+              if (match && (match.state.status === "running" || match.state.status === "streaming")) {
+                const currentOutput = match.state.status === "streaming" ? match.state.output : ""
+                updatePart({
+                  ...match,
+                  state: {
+                    status: "streaming",
+                    input: args,
+                    output: currentOutput + chunk.data,
+                    title: match.state.title,
+                    metadata: match.state.metadata,
+                    time: {
+                      start: match.state.time.start,
+                    },
+                  },
+                })
+              }
+            },
           })
           return result
         },
