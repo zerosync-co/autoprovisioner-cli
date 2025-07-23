@@ -22,7 +22,7 @@ export const BashTool = Tool.define({
   async execute(params, ctx) {
     const timeout = Math.min(params.timeout ?? DEFAULT_TIMEOUT, MAX_TIMEOUT)
 
-    const process = Bun.spawn({
+    const spawnedProcess = Bun.spawn({
       cmd: ["bash", "-c", params.command],
       cwd: App.info().path.cwd,
       maxBuffer: MAX_OUTPUT_LENGTH,
@@ -37,8 +37,8 @@ export const BashTool = Tool.define({
 
     if (ctx.stream) {
       const streamOutput = async () => {
-        const stdoutReader = process.stdout.getReader()
-        const stderrReader = process.stderr.getReader()
+        const stdoutReader = spawnedProcess.stdout.getReader()
+        const stderrReader = spawnedProcess.stderr.getReader()
         const decoder = new TextDecoder()
 
         const readStream = async (reader: ReadableStreamDefaultReader<Uint8Array>, type: "stdout" | "stderr") => {
@@ -80,11 +80,11 @@ export const BashTool = Tool.define({
       })
     }
 
-    await process.exited
+    await spawnedProcess.exited
 
     if (!ctx.stream) {
-      stdoutBuffer = await new Response(process.stdout).text()
-      stderrBuffer = await new Response(process.stderr).text()
+      stdoutBuffer = await new Response(spawnedProcess.stdout).text()
+      stderrBuffer = await new Response(spawnedProcess.stderr).text()
     }
 
     return {
@@ -92,7 +92,7 @@ export const BashTool = Tool.define({
       metadata: {
         stderr: stderrBuffer,
         stdout: stdoutBuffer,
-        exit: process.exitCode,
+        exit: spawnedProcess.exitCode,
         description: params.description,
       },
       output: [`<stdout>`, stdoutBuffer ?? "", `</stdout>`, `<stderr>`, stderrBuffer ?? "", `</stderr>`].join("\n"),

@@ -53,7 +53,7 @@ export const CredentialBashTool = Tool.define({
       }
     }
 
-    const childProcess = Bun.spawn({
+    const spawnedProcess = Bun.spawn({
       cmd: ["bash", "-c", params.command],
       cwd: App.info().path.cwd,
       env,
@@ -63,21 +63,73 @@ export const CredentialBashTool = Tool.define({
       stdout: "pipe",
       stderr: "pipe",
     })
-    await childProcess.exited
-    const stdout = await new Response(childProcess.stdout).text()
-    const stderr = await new Response(childProcess.stderr).text()
+
+    let stdoutBuffer = ""
+    let stderrBuffer = ""
+
+    if (ctx.stream) {
+      const streamOutput = async () => {
+        const stdoutReader = spawnedProcess.stdout.getReader()
+        const stderrReader = spawnedProcess.stderr.getReader()
+        const decoder = new TextDecoder()
+
+        const readStream = async (reader: ReadableStreamDefaultReader<Uint8Array>, type: "stdout" | "stderr") => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+
+              const text = decoder.decode(value, { stream: true })
+
+              if (type === "stdout") {
+                stdoutBuffer += text
+              } else {
+                stderrBuffer += text
+              }
+
+              if (text.trim() && typeof ctx.stream === "function") {
+                ctx.stream({
+                  type,
+                  data: text,
+                  timestamp: Date.now(),
+                })
+              }
+            }
+          } catch (error) {
+            if (!ctx.abort.aborted) {
+              throw error
+            }
+          } finally {
+            reader.releaseLock()
+          }
+        }
+
+        await Promise.all([readStream(stdoutReader, "stdout"), readStream(stderrReader, "stderr")])
+      }
+
+      streamOutput().catch(() => {
+        // Ignore streaming errors, we'll still get final output
+      })
+    }
+
+    await spawnedProcess.exited
+
+    if (!ctx.stream) {
+      stdoutBuffer = await new Response(spawnedProcess.stdout).text()
+      stderrBuffer = await new Response(spawnedProcess.stderr).text()
+    }
 
     return {
       title: params.command,
       metadata: {
-        stderr,
-        stdout,
-        exit: childProcess.exitCode ?? 1,
+        stderr: stderrBuffer,
+        stdout: stdoutBuffer,
+        exit: spawnedProcess.exitCode ?? 1,
         description: params.description,
         credentials: params.credentials,
         missingCredentials: [],
       },
-      output: [`<stdout>`, stdout ?? "", `</stdout>`, `<stderr>`, stderr ?? "", `</stderr>`].join("\n"),
+      output: [`<stdout>`, stdoutBuffer ?? "", `</stdout>`, `<stderr>`, stderrBuffer ?? "", `</stderr>`].join("\n"),
     }
   },
 })
