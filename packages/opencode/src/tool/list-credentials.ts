@@ -3,7 +3,8 @@ import { Tool } from "./tool"
 
 export const ListCredentialsTool = Tool.define({
   id: "list-credentials",
-  description: "Lists available credential environment variables that can be used with credential-bash tool",
+  description:
+    "Lists available credential environment variables. Use this tool BEFORE attempting operations that may require authentication (deployments, API calls, cloud operations) to verify credentials are available.",
   parameters: z.object({}),
   async execute(_params, _ctx) {
     // Get all environment variables that match credential patterns
