@@ -45,7 +45,9 @@ export namespace LSPServer {
     root: NearestRoot(["tsconfig.json", "package.json", "jsconfig.json"]),
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
     async spawn(app, root) {
-      const tsserver = await Bun.resolve("typescript/lib/tsserver.js", app.path.cwd).catch(() => {})
+      let tsserver = await Bun.resolve("typescript/lib/tsserver.js", app.path.cwd).catch(() => {})
+      if (!tsserver) tsserver = await Bun.resolve("typescript/lib/tsserver.js", root).catch(() => {})
+
       if (!tsserver) return
       const proc = spawn(BunProc.which(), ["x", "typescript-language-server", "--stdio"], {
         cwd: root,
