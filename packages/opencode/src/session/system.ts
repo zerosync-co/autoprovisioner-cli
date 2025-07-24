@@ -14,7 +14,6 @@ import PROMPT_SUMMARIZE from "./prompt/summarize.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 
 export namespace SystemPrompt {
-
   export function provider(providerID: string, modelID: string) {
     if (providerID === "anthropic" || providerID === "zerosync")
       return [PROMPT_ANTHROPIC_SPOOF.trim(), PROMPT_ANTHROPIC]
@@ -32,6 +31,7 @@ export namespace SystemPrompt {
         `  Working directory: ${app.path.cwd}`,
         `  Is directory a git repo: ${app.git ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
+        `  Architecture: ${os.arch()}`,
         `  Today's date: ${new Date().toDateString()}`,
         `</env>`,
         `<project>`,

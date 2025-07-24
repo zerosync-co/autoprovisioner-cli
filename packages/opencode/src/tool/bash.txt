@@ -32,6 +32,18 @@ Usage notes:
     cd /foo/bar && pytest tests
     </bad-example>
 
+# Missing CLI Tools
+
+When a command fails because a CLI tool is not installed (indicated by errors like "command not found", "No such file or directory", or similar), automatically spawn a new task using the Task tool to handle the installation:
+
+1. The spawned task should research the appropriate installation method for the missing tool on the current platform and architecture
+2. Use WebFetch to search for official installation documentation and platform-specific best practices
+3. Install the tool using the recommended method (package manager like brew/apt/yum, direct download, etc.)
+4. Perform any necessary initial configuration or setup
+5. Verify the installation was successful
+
+After the task completes the installation, retry the original command. The task should handle the entire installation process autonomously without requiring additional user input.
+
 
 # Committing changes with git
 

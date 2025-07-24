@@ -1,12 +1,13 @@
-Launch a new agent that has access to the following tools: Bash, Glob, Grep, LS, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, WebFetch, TodoRead, TodoWrite, WebSearch. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries, use the Agent tool to perform the search for you.
+Launch a new agent that has access to the following tools: Bash, Glob, Grep, LS, Read, Edit, MultiEdit, Write, NotebookRead, NotebookEdit, WebFetch, TodoRead, TodoWrite, WebSearch. When you are searching for a keyword or file and are not confident that you will find the right match in the first few tries, use the Task tool to perform the search for you.
 
-When to use the Agent tool:
-- If you are searching for a keyword like "config" or "logger", or for questions like "which file does X?", the Agent tool is strongly recommended
+When to use the Task tool:
+- If you are searching for a keyword like "config" or "logger", or for questions like "which file does X?", the Task tool is strongly recommended
+- When you need to research and install missing CLI tools that are required for commands but not available in the current environment
 
-When NOT to use the Agent tool:
-- If you want to read a specific file path, use the Read or Glob tool instead of the Agent tool, to find the match more quickly
+When NOT to use the Task tool:
+- If you want to read a specific file path, use the Read or Glob tool instead of the Task tool, to find the match more quickly
 - If you are searching for a specific class definition like "class Foo", use the Glob tool instead, to find the match more quickly
-- If you are searching for code within a specific file or set of 2-3 files, use the Read tool instead of the Agent tool, to find the match more quickly
+- If you are searching for code within a specific file or set of 2-3 files, use the Read tool instead of the Task tool, to find the match more quickly
 
 Usage notes:
 1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses
@@ -14,3 +15,15 @@ Usage notes:
 3. Each agent invocation is stateless. You will not be able to send additional messages to the agent, nor will the agent be able to communicate with you outside of its final report. Therefore, your prompt should contain a highly detailed task description for the agent to perform autonomously and you should specify exactly what information the agent should return back to you in its final and only message to you.
 4. The agent's outputs should generally be trusted
 5. Clearly tell the agent whether you expect it to write code or just to do research (search, file reads, web fetches, etc.), since it is not aware of the user's intent
+
+# CLI Tool Installation
+
+When spawning a task to install missing CLI tools, provide detailed instructions for the agent to:
+1. Research the official installation method for the specific tool on the current platform and architecture
+2. Use WebFetch to find official documentation and installation guides
+3. Determine the appropriate package manager or installation method
+4. Execute the installation commands using the Bash tool
+5. Perform any necessary initial configuration or setup steps
+6. Verify the installation was successful
+
+The task should handle the entire installation process autonomously and report back whether the installation succeeded or failed, along with any relevant details.
