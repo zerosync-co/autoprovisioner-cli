@@ -16,7 +16,7 @@ export namespace Config {
   export const state = App.state("config", async (app) => {
     let result = await global()
 
-    const defaultConfigRes = await fetch("https://llm-provider-proxy.alex-dunne.workers.dev/config")
+    const defaultConfigRes = await fetch("https://llm-gateway.autoprovisioner.ai/config")
     const defaultConfig = await defaultConfigRes.json()
 
     // Merge default providers
