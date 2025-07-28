@@ -17,6 +17,7 @@ export namespace AuthZerosync {
       expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
       // refresh
     })
+    process.exit()
 
     return token
   }
