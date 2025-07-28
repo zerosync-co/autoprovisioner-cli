@@ -30,7 +30,7 @@ export namespace AuthZerosync {
 }
 
 async function login() {
-  const urlToOpen = "https://autoprovisioner.zerosync.co/auth/cli/sign-in"
+  const urlToOpen = "https://autoprovisioner.ai/auth/cli/sign-in"
 
   let server: Bun.Server
   let loginTimeoutHandle: ReturnType<typeof setTimeout>
@@ -91,7 +91,7 @@ async function login() {
   if (prompts.isCancel(shouldOpen)) throw new UI.CancelledError()
 
   if (!shouldOpen) {
-    prompts.log.info("You can manually visit: https://autoprovisioner.zerosync.co/auth/cli/sign-in")
+    prompts.log.info("You can manually visit: https://autoprovisioner.ai/auth/cli/sign-in")
   } else {
     open(urlToOpen)
   }

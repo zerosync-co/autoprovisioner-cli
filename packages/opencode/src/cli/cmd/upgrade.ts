@@ -6,7 +6,7 @@ export const UpgradeCommand = {
   command: "upgrade",
   describe: "upgrade plan for higher rate limits and more usage with the best models",
   handler: async () => {
-    const pricingUrl = "https://autoprovisioner.zerosync.co/pricing"
+    const pricingUrl = "https://autoprovisioner.ai/pricing"
 
     prompts.note("This will open a browser window to complete the subscription upgrade")
     const shouldOpen = await prompts.confirm({
