@@ -1,18 +1,21 @@
 import { App } from "../../app/app"
-import { Provider } from "../../provider/provider"
+import { Config } from "../../config/config"
 import { cmd } from "./cmd"
 
 export const ModelsCommand = cmd({
   command: "models",
-  describe: "list all available models",
+  describe: "list available models from zerosync config",
   handler: async () => {
     await App.provide({ cwd: process.cwd() }, async () => {
-      const providers = await Provider.list()
+      const config = await Config.get()
 
-      for (const [providerID, provider] of Object.entries(providers)) {
-        for (const modelID of Object.keys(provider.info.models)) {
-          console.log(`${providerID}/${modelID}`)
+      const zerosyncProvider = config.provider?.["zerosync"]
+      if (zerosyncProvider?.models) {
+        for (const modelID of Object.keys(zerosyncProvider.models)) {
+          console.log(`zerosync/${modelID}`)
         }
+      } else {
+        console.log("No zerosync models found in config")
       }
     })
   },

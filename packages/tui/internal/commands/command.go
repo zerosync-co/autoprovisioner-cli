@@ -222,7 +222,7 @@ func LoadFromConfig(config *opencode.Config) CommandRegistry {
 			Name:        ModelListCommand,
 			Description: "list models",
 			Keybindings: parseBindings("<leader>m"),
-			// Trigger:     []string{"models"},
+			Trigger:     []string{"models"},
 		},
 		{
 			Name:        ThemeListCommand,
