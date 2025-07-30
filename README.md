@@ -12,4 +12,4 @@ curl -fsSL https://cli.autoprovisioner.ai/install | bash
 
 ## Credits
 
-This project a fork of [opencode](https://github.com/sst/opencode) by [SST](https://github.com/sst)
+This project is a fork of [opencode](https://github.com/sst/opencode) by [SST](https://github.com/sst)
