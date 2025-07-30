@@ -41,9 +41,6 @@ export namespace Config {
     if (!result.layout) {
       result.layout = "auto"
     }
-    if (!result.model) {
-      result.model = defaultConfig.defaultModel
-    }
 
     log.info("loaded", result)
 
