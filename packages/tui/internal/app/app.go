@@ -264,19 +264,44 @@ func (a *App) InitializeProvider() tea.Cmd {
 	var defaultProvider *opencode.Provider
 	var defaultModel *opencode.Model
 
-	var anthropic *opencode.Provider
-	for _, provider := range providers {
-		if provider.ID == "anthropic" {
-			anthropic = &provider
+	// First, try to use the DefaultModel from config if available
+	if a.Config.DefaultModel != "" {
+		parts := strings.SplitN(a.Config.DefaultModel, "/", 2)
+		if len(parts) == 2 {
+			providerID := parts[0]
+			modelID := parts[1]
+			
+			for _, provider := range providers {
+				if provider.ID == providerID {
+					defaultProvider = &provider
+					for _, model := range provider.Models {
+						if model.ID == modelID {
+							defaultModel = &model
+							break
+						}
+					}
+					break
+				}
+			}
 		}
 	}
 
-	// default to anthropic if available
-	if anthropic != nil {
-		defaultProvider = anthropic
-		defaultModel = getDefaultModel(providersResponse, *anthropic)
+	// If no DefaultModel from config, fall back to anthropic if available
+	if defaultProvider == nil || defaultModel == nil {
+		var anthropic *opencode.Provider
+		for _, provider := range providers {
+			if provider.ID == "anthropic" {
+				anthropic = &provider
+			}
+		}
+
+		if anthropic != nil {
+			defaultProvider = anthropic
+			defaultModel = getDefaultModel(providersResponse, *anthropic)
+		}
 	}
 
+	// If still no default, use the first available provider
 	for _, provider := range providers {
 		if defaultProvider == nil || defaultModel == nil {
 			defaultProvider = &provider

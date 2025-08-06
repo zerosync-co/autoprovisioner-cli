@@ -65,6 +65,8 @@ type Config struct {
 	Mode ConfigMode `json:"mode"`
 	// Model to use in the format of provider/model, eg anthropic/claude-2
 	Model string `json:"model"`
+	// Default model from server config in the format of provider/model
+	DefaultModel string `json:"defaultModel"`
 	// Custom provider configurations and model overrides
 	Provider map[string]ConfigProvider `json:"provider"`
 	// Control sharing behavior:'manual' allows manual sharing via commands, 'auto'

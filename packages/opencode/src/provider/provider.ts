@@ -484,6 +484,7 @@ export namespace Provider {
   export async function defaultModel() {
     const cfg = await Config.get()
     if (cfg.model) return parseModel(cfg.model)
+    if (cfg.defaultModel) return parseModel(cfg.defaultModel)
     const provider = await list()
       .then((val) => Object.values(val))
       .then((x) => x.find((p) => !cfg.provider || Object.keys(cfg.provider).includes(p.info.id)))

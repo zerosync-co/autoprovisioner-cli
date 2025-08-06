@@ -16,11 +16,16 @@ export namespace Config {
   export const state = App.state("config", async (app) => {
     let result = await global()
 
-    const defaultConfigRes = await fetch("https://llm-gateway.autoprovisioner.ai/config")
-    const defaultConfig = await defaultConfigRes.json()
+    const configRes = await fetch("https://llm-gateway.autoprovisioner.ai/config")
+    const config = await configRes.json()
 
-    // Merge default providers
-    result = mergeDeep({ provider: defaultConfig.defaultProviders }, result)
+    result = mergeDeep(
+      {
+        provider: config.defaultProviders,
+        defaultModel: config.defaultModel,
+      },
+      result,
+    )
 
     for (const file of ["autoprovisioner.jsonc", "autoprovisioner.json"]) {
       const found = await Filesystem.findUp(file, app.path.cwd, app.path.root)
@@ -159,6 +164,7 @@ export namespace Config {
       autoupdate: z.boolean().optional().describe("Automatically update to the latest version"),
       disabled_providers: z.array(z.string()).optional().describe("Disable providers that are loaded automatically"),
       model: z.string().describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      defaultModel: z.string().describe("Default model from server config in the format of provider/model").optional(),
       small_model: z
         .string()
         .describe(
