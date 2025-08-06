@@ -43,8 +43,8 @@ let state:
 
 async function run() {
   try {
-    const match = body.match(/^hey\s*opencode,?\s*(.*)$/)
-    if (!match?.[1]) throw new Error("Command must start with `hey opencode`")
+    const match = body.match(/^hey\s*autoprovisioner,?\s*(.*)$/)
+    if (!match?.[1]) throw new Error("Command must start with `hey autoprovisioner`")
     const userPrompt = match[1]
 
     const oidcToken = await generateGitHubToken()
@@ -57,7 +57,7 @@ async function run() {
     await configureGit(appToken)
     await assertPermissions()
 
-    const comment = await createComment("opencode started...")
+    const comment = await createComment("autoprovisioner started...")
     commentId = comment.data.id
 
     // Set state
@@ -87,7 +87,7 @@ async function run() {
     })
 
     const response = responseRet.stdout
-    shareUrl = responseRet.stderr.match(/https:\/\/opencode\.ai\/s\/\w+/)?.[0]
+    shareUrl = responseRet.stderr.match(/https:\/\/autoprovisioner\.ai\/s\/\w+/)?.[0]
 
     // Comment and push changes
     if (await branchIsDirty()) {
@@ -98,7 +98,7 @@ async function run() {
       if (state.type === "issue") {
         const branch = await pushToNewBranch(summary)
         const pr = await createPR(repoData.data.default_branch, branch, summary, `${response}\n\nCloses #${issueId}`)
-        await updateComment(`opencode created pull request #${pr}`)
+        await updateComment(`autoprovisioner created pull request #${pr}`)
       } else if (state.type === "local-pr") {
         await pushToCurrentBranch(summary)
         await updateComment(response)
@@ -122,7 +122,7 @@ async function run() {
       msg = e.message
     }
     if (commentId) await updateComment(msg)
-    core.setFailed(`opencode failed with error: ${msg}`)
+    core.setFailed(`autoprovisioner failed with error: ${msg}`)
     // Also output the clean error message for the action to capture
     //core.setOutput("prepare_error", e.message);
     process.exit(1)
@@ -135,7 +135,7 @@ if (import.meta.main) {
 
 async function generateGitHubToken() {
   try {
-    return await core.getIDToken("opencode-github-action")
+    return await core.getIDToken("autoprovisioner-github-action")
   } catch (error) {
     console.error("Failed to get OIDC token:", error)
     throw new Error("Could not fetch an OIDC token. Make sure to add `id-token: write` to your workflow permissions.")
@@ -143,7 +143,7 @@ async function generateGitHubToken() {
 }
 
 async function exchangeForAppToken(oidcToken: string) {
-  const response = await fetch("https://api.opencode.ai/exchange_github_app_token", {
+  const response = await fetch("https://api.autoprovisioner.ai/exchange_github_app_token", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${oidcToken}`,
@@ -169,8 +169,8 @@ async function configureGit(appToken: string) {
 
   await $`git config --local --unset-all ${config}`
   await $`git config --local ${config} "AUTHORIZATION: basic ${newCredentials}"`
-  await $`git config --global user.name "opencode-agent[bot]"`
-  await $`git config --global user.email "opencode-agent[bot]@users.noreply.github.com"`
+  await $`git config --global user.name "autoprovisioner-agent[bot]"`
+  await $`git config --global user.email "autoprovisioner-agent[bot]@users.noreply.github.com"`
 }
 
 async function checkoutLocalBranch(pr: GitHubPullRequest) {
@@ -256,14 +256,14 @@ function generateBranchName() {
     .replace(/\.\d{3}Z/, "")
     .split("T")
     .join("_")
-  return `opencode/${type}${issueId}-${timestamp}`
+  return `autoprovisioner/${type}${issueId}-${timestamp}`
 }
 
 async function pushToCurrentBranch(summary: string) {
   console.log("Pushing to current branch...")
   await $`git add .`
   await $`git commit -m "${summary}
-  
+
 Co-authored-by: ${actor} <${actor}@users.noreply.github.com>"`
   await $`git push`
 }
@@ -275,7 +275,7 @@ async function pushToForkBranch(summary: string, pr: GitHubPullRequest) {
 
   await $`git add .`
   await $`git commit -m "${summary}
-  
+
 Co-authored-by: ${actor} <${actor}@users.noreply.github.com>"`
   await $`git push fork HEAD:${remoteBranch}`
 }
@@ -286,7 +286,7 @@ async function pushToNewBranch(summary: string) {
   await $`git checkout -b ${branch}`
   await $`git add .`
   await $`git commit -m "${summary}
-  
+
 Co-authored-by: ${actor} <${actor}@users.noreply.github.com>"`
   await $`git push -u origin ${branch}`
   return branch
@@ -311,11 +311,12 @@ async function runOpencode(
     share?: boolean
   },
 ) {
-  console.log("Running opencode...")
+  console.log("Running autoprovisioner...")
 
   const promptPath = path.join(os.tmpdir(), "PROMPT")
   await Bun.write(promptPath, prompt)
-  const ret = await $`cat ${promptPath} | opencode run -m ${process.env.INPUT_MODEL} ${opts?.share ? "--share" : ""}`
+  const ret =
+    await $`cat ${promptPath} | autoprovisioner run -m ${process.env.INPUT_MODEL} ${opts?.share ? "--share" : ""}`
   return {
     stdout: ret.stdout.toString().trim(),
     stderr: ret.stderr.toString().trim(),

@@ -22,7 +22,7 @@ export namespace Config {
     // Merge default providers
     result = mergeDeep({ provider: defaultConfig.defaultProviders }, result)
 
-    for (const file of ["opencode.jsonc", "opencode.json"]) {
+    for (const file of ["autoprovisioner.jsonc", "autoprovisioner.json"]) {
       const found = await Filesystem.findUp(file, app.path.cwd, app.path.root)
       for (const resolved of found.toReversed()) {
         result = mergeDeep(result, await load(resolved))
@@ -176,7 +176,7 @@ export namespace Config {
         })
         .catchall(Mode)
         .optional()
-        .describe("Modes configuration, see https://opencode.ai/docs/modes"),
+        .describe("Modes configuration, see https://autoprovisioner.ai/docs/modes"),
       provider: z
         .record(
           ModelsDev.Provider.partial().extend({
@@ -227,7 +227,7 @@ export namespace Config {
     let result = pipe(
       {},
       mergeDeep(await load(path.join(Global.Path.config, "config.json"))),
-      mergeDeep(await load(path.join(Global.Path.config, "opencode.json"))),
+      mergeDeep(await load(path.join(Global.Path.config, "autoprovisioner.json"))),
     )
 
     await import(path.join(Global.Path.config, "config"), {
