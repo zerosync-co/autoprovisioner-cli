@@ -4,7 +4,7 @@ import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import { Log } from "./util/log"
-// import { AuthCommand } from "./cli/cmd/auth"
+import { AuthCommand } from "./cli/cmd/auth"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
@@ -71,7 +71,7 @@ const cli = yargs(hideBin(process.argv))
   .command(RunCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
-  // .command(AuthCommand)
+  .command(AuthCommand)
   .command(UpgradeCommand)
   // .command(ServeCommand)
   .command(ModelsCommand)

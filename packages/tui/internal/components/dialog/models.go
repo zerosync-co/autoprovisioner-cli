@@ -66,12 +66,18 @@ func (m modelItem) Render(
 		itemStyle = itemStyle.Foreground(t.Primary())
 	}
 
-	modelPart := itemStyle.Render(m.model.Model.Name)
+	providerStyle := baseStyle.
+		Foreground(t.TextMuted()).
+		Background(t.BackgroundPanel())
 
+	modelPart := itemStyle.Render(m.model.Model.Name)
+	providerPart := providerStyle.Render(fmt.Sprintf(" %s", m.model.Provider.Name))
+
+	combinedText := modelPart + providerPart
 	return baseStyle.
 		Background(t.BackgroundPanel()).
 		PaddingLeft(1).
-		Render(modelPart)
+		Render(combinedText)
 }
 
 func (m modelItem) Selectable() bool {
@@ -263,7 +269,7 @@ func (m *modelDialog) buildDisplayList(query string) []list.Item {
 		return m.buildSearchResults(query)
 	} else {
 		// Grouped mode: show Recent section and provider groups
-		return m.buildFilteredResults()
+		return m.buildGroupedResults()
 	}
 }
 
@@ -279,10 +285,6 @@ func (m *modelDialog) buildSearchResults(query string) []list.Item {
 
 	// Create search strings and perform fuzzy matching
 	for _, model := range m.allModels {
-		if model.Provider.ID != "zerosync" || model.Model.Name == "language" {
-			continue
-		}
-
 		searchStr := fmt.Sprintf("%s %s", model.Model.Name, model.Provider.Name)
 		modelNames = append(modelNames, searchStr)
 		modelMap[searchStr] = model
@@ -312,16 +314,86 @@ func (m *modelDialog) buildSearchResults(query string) []list.Item {
 	return items
 }
 
-// buildFilteredResults creates a filtered list with ZeroSync section
-func (m *modelDialog) buildFilteredResults() []list.Item {
+// buildGroupedResults creates a grouped list with Recent section, ZeroSync section, and other providers
+func (m *modelDialog) buildGroupedResults() []list.Item {
 	var items []list.Item
 
-	items = append(items, list.HeaderItem("ZeroSync"))
+	// Add Recent section
+	recentModels := m.getRecentModels(maxRecentModels)
+	if len(recentModels) > 0 {
+		items = append(items, list.HeaderItem("Recent"))
+		for _, model := range recentModels {
+			items = append(items, modelItem{model: model})
+		}
+	}
 
+	// Add ZeroSync section
+	items = append(items, list.HeaderItem("ZeroSync"))
 	for _, model := range m.allModels {
+		if model.Provider.ID == "zerosync" {
+			items = append(items, modelItem{model: model})
+		}
+	}
+
+	// Group remaining models by provider
+	providerGroups := make(map[string][]ModelWithProvider)
+	for _, model := range m.allModels {
+		// Skip zerosync models as they're already shown above
+		if model.Provider.ID == "zerosync" {
+			continue
+		}
 		providerName := model.Provider.Name
-		if providerName == "ZeroSync" && model.Model.Name != "language" {
-			items = append(items, modelItem{model})
+		providerGroups[providerName] = append(providerGroups[providerName], model)
+	}
+
+	// Get sorted provider names for consistent order
+	var providerNames []string
+	for name := range providerGroups {
+		providerNames = append(providerNames, name)
+	}
+	sort.Strings(providerNames)
+
+	// Add provider groups
+	for _, providerName := range providerNames {
+		models := providerGroups[providerName]
+
+		// Sort models within provider group
+		sort.Slice(models, func(i, j int) bool {
+			modelA := models[i]
+			modelB := models[j]
+
+			usageA := m.getModelUsageTime(modelA.Provider.ID, modelA.Model.ID)
+			usageB := m.getModelUsageTime(modelB.Provider.ID, modelB.Model.ID)
+
+			// Sort by usage time first, then by release date, then alphabetically
+			if !usageA.IsZero() && !usageB.IsZero() {
+				return usageA.After(usageB)
+			}
+			if !usageA.IsZero() && usageB.IsZero() {
+				return true
+			}
+			if usageA.IsZero() && !usageB.IsZero() {
+				return false
+			}
+
+			// Sort by release date if available
+			if modelA.Model.ReleaseDate != "" && modelB.Model.ReleaseDate != "" {
+				dateA := m.parseReleaseDate(modelA.Model.ReleaseDate)
+				dateB := m.parseReleaseDate(modelB.Model.ReleaseDate)
+				if !dateA.IsZero() && !dateB.IsZero() {
+					return dateA.After(dateB)
+				}
+			}
+
+			return modelA.Model.Name < modelB.Model.Name
+		})
+
+		// Add provider header
+		items = append(items, list.HeaderItem(providerName))
+
+		// Add models in this provider group
+		for _, model := range models {
+			items = append(items, modelItem{model: model})
 		}
 	}
 
